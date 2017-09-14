@@ -60,7 +60,7 @@ function Refs(view) {
       if (target[name]) {
         return target[name];
       }
-      el = view.el.querySelector(`[ref=${name}]`);
+      const el = view.el.querySelector(`[ref=${name}]`);
       target[name] = el;
       return el;
     }

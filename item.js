@@ -10,12 +10,13 @@ class ItemView extends View {
   }
 
   render() {
-    return this.tmpl`
+    this.el = this.tmpl`
       <section class="item" onclick=${this.handleClick}>
         <div ref="title" class="title">${this.title}</div>
         <div ref="summary" class="summary">${this.summary}</div>
       </section>
     `;
+    return this.el;
   }
 
   handleClick() {

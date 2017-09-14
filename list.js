@@ -9,12 +9,13 @@ class ListView extends View {
   }
 
   render() {
-    return this.tmpl`
+    this.el = this.tmpl`
       <div class="listing">
         LISTING:
         ${this.items.map(item => new ItemView(item).render())}
       </div>
     `;
+    return this.el;
   }
 
 }
