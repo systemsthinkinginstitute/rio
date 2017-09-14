@@ -2,7 +2,7 @@ import ListView from './list.js';
 
 const items = [];
 
-for (let i = 0; i < 100; i++) {
+for (let i = 0; i < 10000; i++) {
   items.push(String(Math.random()));
 }
 
