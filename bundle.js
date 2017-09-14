@@ -134,7 +134,7 @@ function Refs(view) {
       if (target[name]) {
         return target[name];
       }
-      el = view.el.querySelector(`[ref=${name}]`);
+      const el = view.el.querySelector(`[ref=${name}]`);
       target[name] = el;
       return el;
     }
@@ -191,12 +191,13 @@ class ListView extends __WEBPACK_IMPORTED_MODULE_0__base__["a" /* default */] {
   }
 
   render() {
-    return this.tmpl`
+    this.el = this.tmpl`
       <div class="listing">
         LISTING:
         ${this.items.map(item => new __WEBPACK_IMPORTED_MODULE_1__item__["a" /* default */](item).render())}
       </div>
     `;
+    return this.el;
   }
 
 }
@@ -1456,12 +1457,13 @@ class ItemView extends __WEBPACK_IMPORTED_MODULE_0__base__["a" /* default */] {
   }
 
   render() {
-    return this.tmpl`
+    this.el = this.tmpl`
       <section class="item" onclick=${this.handleClick}>
         <div ref="title" class="title">${this.title}</div>
         <div ref="summary" class="summary">${this.summary}</div>
       </section>
     `;
+    return this.el;
   }
 
   handleClick() {
