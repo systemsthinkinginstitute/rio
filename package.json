@@ -1,0 +1,15 @@
+{
+  "name": "point.js",
+  "version": "1.0.0",
+  "description": "",
+  "main": "base.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bel": "^5.1.1",
+    "morphdom": "^2.3.3"
+  }
+}
