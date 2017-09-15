@@ -68,11 +68,8 @@
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_bel__ = __webpack_require__(3);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_bel___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_bel__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_morphdom__ = __webpack_require__(6);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_morphdom___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1_morphdom__);
-
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_morphdom__ = __webpack_require__(3);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_morphdom___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_morphdom__);
 
 
 
@@ -81,9 +78,9 @@ class View {
   constructor() {
     this.handlers = { mount: [], update: [], updated: [] };
     this.initialize.apply(this, arguments);
-    this.tmpl = __WEBPACK_IMPORTED_MODULE_0_bel___default.a;
     this.finalize.apply(this);
     this.refs = Refs(this);
+    this._dp = new DOMParser();
   }
 
   initialize() {
@@ -94,9 +91,11 @@ class View {
     // implement in subclass
   }
 
-  render() {
-    // implement in subclass
-    return __WEBPACK_IMPORTED_MODULE_0_bel___default.a`<div></div>`;
+  // subclasses must call super.render();
+  render(tmpl, contentType) {
+    if (!contentType) { contentType = 'text/html'; }
+    const doc = this._dp.parseFromString(tmpl, contentType);
+    return doc.body.firstChild;
   }
 
   mount(el) {
@@ -108,7 +107,7 @@ class View {
   update() {
     this.handle('update');
     const newEl = this.render();
-    __WEBPACK_IMPORTED_MODULE_1_morphdom___default()(this.el, newEl);
+    __WEBPACK_IMPORTED_MODULE_0_morphdom___default()(this.el, newEl);
     this.handle('updated');
   }
 
@@ -159,7 +158,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 
 const items = [];
 
-for (let i = 0; i < 100; i++) {
+for (let i = 0; i < 10000; i++) {
   items.push(String(Math.random()));
 }
 
@@ -179,7 +178,7 @@ console.log("ELAPSED", elapsedTime);
 
 "use strict";
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__base__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__item__ = __webpack_require__(7);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__item__ = __webpack_require__(4);
 
 
 
@@ -191,12 +190,15 @@ class ListView extends __WEBPACK_IMPORTED_MODULE_0__base__["a" /* default */] {
   }
 
   render() {
-    this.el = this.tmpl`
+    this.el = super.render(`
       <div class="listing">
         LISTING:
-        ${this.items.map(item => new __WEBPACK_IMPORTED_MODULE_1__item__["a" /* default */](item).render())}
       </div>
-    `;
+    `);
+
+    for (const item of this.items) {
+      this.el.appendChild(new __WEBPACK_IMPORTED_MODULE_1__item__["a" /* default */](item).render());
+    }
     return this.el;
   }
 
@@ -207,551 +209,6 @@ class ListView extends __WEBPACK_IMPORTED_MODULE_0__base__["a" /* default */] {
 
 /***/ }),
 /* 3 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var hyperx = __webpack_require__(4)
-
-var trailingNewlineRegex = /\n[\s]+$/
-var leadingNewlineRegex = /^\n[\s]+/
-var trailingSpaceRegex = /[\s]+$/
-var leadingSpaceRegex = /^[\s]+/
-var multiSpaceRegex = /[\n\s]+/g
-
-var SVGNS = 'http://www.w3.org/2000/svg'
-var XLINKNS = 'http://www.w3.org/1999/xlink'
-
-var BOOL_PROPS = [
-  'autofocus', 'checked', 'defaultchecked', 'disabled', 'formnovalidate',
-  'indeterminate', 'readonly', 'required', 'selected', 'willvalidate'
-]
-
-var COMMENT_TAG = '!--'
-
-var TEXT_TAGS = [
-  'a', 'abbr', 'b', 'bdi', 'bdo', 'br', 'cite', 'data', 'dfn', 'em', 'i',
-  'kbd', 'mark', 'q', 'rp', 'rt', 'rtc', 'ruby', 's', 'amp', 'small', 'span',
-  'strong', 'sub', 'sup', 'time', 'u', 'var', 'wbr'
-]
-
-var CODE_TAGS = [
-  'code', 'pre'
-]
-
-var SVG_TAGS = [
-  'svg', 'altGlyph', 'altGlyphDef', 'altGlyphItem', 'animate', 'animateColor',
-  'animateMotion', 'animateTransform', 'circle', 'clipPath', 'color-profile',
-  'cursor', 'defs', 'desc', 'ellipse', 'feBlend', 'feColorMatrix',
-  'feComponentTransfer', 'feComposite', 'feConvolveMatrix',
-  'feDiffuseLighting', 'feDisplacementMap', 'feDistantLight', 'feFlood',
-  'feFuncA', 'feFuncB', 'feFuncG', 'feFuncR', 'feGaussianBlur', 'feImage',
-  'feMerge', 'feMergeNode', 'feMorphology', 'feOffset', 'fePointLight',
-  'feSpecularLighting', 'feSpotLight', 'feTile', 'feTurbulence', 'filter',
-  'font', 'font-face', 'font-face-format', 'font-face-name', 'font-face-src',
-  'font-face-uri', 'foreignObject', 'g', 'glyph', 'glyphRef', 'hkern', 'image',
-  'line', 'linearGradient', 'marker', 'mask', 'metadata', 'missing-glyph',
-  'mpath', 'path', 'pattern', 'polygon', 'polyline', 'radialGradient', 'rect',
-  'set', 'stop', 'switch', 'symbol', 'text', 'textPath', 'title', 'tref',
-  'tspan', 'use', 'view', 'vkern'
-]
-
-function belCreateElement (tag, props, children) {
-  var el
-
-  // If an svg tag, it needs a namespace
-  if (SVG_TAGS.indexOf(tag) !== -1) {
-    props.namespace = SVGNS
-  }
-
-  // If we are using a namespace
-  var ns = false
-  if (props.namespace) {
-    ns = props.namespace
-    delete props.namespace
-  }
-
-  // Create the element
-  if (ns) {
-    el = document.createElementNS(ns, tag)
-  } else if (tag === COMMENT_TAG) {
-    return document.createComment(props.comment)
-  } else {
-    el = document.createElement(tag)
-  }
-
-  var nodeName = el.nodeName.toLowerCase()
-
-  // Create the properties
-  for (var p in props) {
-    if (props.hasOwnProperty(p)) {
-      var key = p.toLowerCase()
-      var val = props[p]
-      // Normalize className
-      if (key === 'classname') {
-        key = 'class'
-        p = 'class'
-      }
-      // The for attribute gets transformed to htmlFor, but we just set as for
-      if (p === 'htmlFor') {
-        p = 'for'
-      }
-      // If a property is boolean, set itself to the key
-      if (BOOL_PROPS.indexOf(key) !== -1) {
-        if (val === 'true') val = key
-        else if (val === 'false') continue
-      }
-      // If a property prefers being set directly vs setAttribute
-      if (key.slice(0, 2) === 'on') {
-        el[p] = val
-      } else {
-        if (ns) {
-          if (p === 'xlink:href') {
-            el.setAttributeNS(XLINKNS, p, val)
-          } else if (/^xmlns($|:)/i.test(p)) {
-            // skip xmlns definitions
-          } else {
-            el.setAttributeNS(null, p, val)
-          }
-        } else {
-          el.setAttribute(p, val)
-        }
-      }
-    }
-  }
-
-  appendChild(children)
-  return el
-
-  function appendChild (childs) {
-    if (!Array.isArray(childs)) return
-
-    var hadText = false
-    var value, leader
-
-    for (var i = 0, len = childs.length; i < len; i++) {
-      var node = childs[i]
-      if (Array.isArray(node)) {
-        appendChild(node)
-        continue
-      }
-
-      if (typeof node === 'number' ||
-        typeof node === 'boolean' ||
-        typeof node === 'function' ||
-        node instanceof Date ||
-        node instanceof RegExp) {
-        node = node.toString()
-      }
-
-      var lastChild = el.childNodes[el.childNodes.length - 1]
-
-      // Iterate over text nodes
-      if (typeof node === 'string') {
-        hadText = true
-
-        // If we already had text, append to the existing text
-        if (lastChild && lastChild.nodeName === '#text') {
-          lastChild.nodeValue += node
-
-        // We didn't have a text node yet, create one
-        } else {
-          node = document.createTextNode(node)
-          el.appendChild(node)
-          lastChild = node
-        }
-
-        // If this is the last of the child nodes, make sure we close it out
-        // right
-        if (i === len - 1) {
-          hadText = false
-          // Trim the child text nodes if the current node isn't a
-          // node where whitespace matters.
-          if (TEXT_TAGS.indexOf(nodeName) === -1 &&
-            CODE_TAGS.indexOf(nodeName) === -1) {
-            value = lastChild.nodeValue
-              .replace(leadingNewlineRegex, '')
-              .replace(trailingSpaceRegex, '')
-              .replace(trailingNewlineRegex, '')
-              .replace(multiSpaceRegex, ' ')
-            if (value === '') {
-              el.removeChild(lastChild)
-            } else {
-              lastChild.nodeValue = value
-            }
-          } else if (CODE_TAGS.indexOf(nodeName) === -1) {
-            // The very first node in the list should not have leading
-            // whitespace. Sibling text nodes should have whitespace if there
-            // was any.
-            leader = i === 0 ? '' : ' '
-            value = lastChild.nodeValue
-              .replace(leadingNewlineRegex, leader)
-              .replace(leadingSpaceRegex, ' ')
-              .replace(trailingSpaceRegex, '')
-              .replace(trailingNewlineRegex, '')
-              .replace(multiSpaceRegex, ' ')
-            lastChild.nodeValue = value
-          }
-        }
-
-      // Iterate over DOM nodes
-      } else if (node && node.nodeType) {
-        // If the last node was a text node, make sure it is properly closed out
-        if (hadText) {
-          hadText = false
-
-          // Trim the child text nodes if the current node isn't a
-          // text node or a code node
-          if (TEXT_TAGS.indexOf(nodeName) === -1 &&
-            CODE_TAGS.indexOf(nodeName) === -1) {
-            value = lastChild.nodeValue
-              .replace(leadingNewlineRegex, '')
-              .replace(trailingNewlineRegex, '')
-              .replace(multiSpaceRegex, ' ')
-
-            // Remove empty text nodes, append otherwise
-            if (value === '') {
-              el.removeChild(lastChild)
-            } else {
-              lastChild.nodeValue = value
-            }
-          // Trim the child nodes if the current node is not a node
-          // where all whitespace must be preserved
-          } else if (CODE_TAGS.indexOf(nodeName) === -1) {
-            value = lastChild.nodeValue
-              .replace(leadingSpaceRegex, ' ')
-              .replace(leadingNewlineRegex, '')
-              .replace(trailingNewlineRegex, '')
-              .replace(multiSpaceRegex, ' ')
-            lastChild.nodeValue = value
-          }
-        }
-
-        // Store the last nodename
-        var _nodeName = node.nodeName
-        if (_nodeName) nodeName = _nodeName.toLowerCase()
-
-        // Append the node to the DOM
-        el.appendChild(node)
-      }
-    }
-  }
-}
-
-module.exports = hyperx(belCreateElement, {comments: true})
-module.exports.default = module.exports
-module.exports.createElement = belCreateElement
-
-
-/***/ }),
-/* 4 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var attrToProp = __webpack_require__(5)
-
-var VAR = 0, TEXT = 1, OPEN = 2, CLOSE = 3, ATTR = 4
-var ATTR_KEY = 5, ATTR_KEY_W = 6
-var ATTR_VALUE_W = 7, ATTR_VALUE = 8
-var ATTR_VALUE_SQ = 9, ATTR_VALUE_DQ = 10
-var ATTR_EQ = 11, ATTR_BREAK = 12
-var COMMENT = 13
-
-module.exports = function (h, opts) {
-  if (!opts) opts = {}
-  var concat = opts.concat || function (a, b) {
-    return String(a) + String(b)
-  }
-  if (opts.attrToProp !== false) {
-    h = attrToProp(h)
-  }
-
-  return function (strings) {
-    var state = TEXT, reg = ''
-    var arglen = arguments.length
-    var parts = []
-
-    for (var i = 0; i < strings.length; i++) {
-      if (i < arglen - 1) {
-        var arg = arguments[i+1]
-        var p = parse(strings[i])
-        var xstate = state
-        if (xstate === ATTR_VALUE_DQ) xstate = ATTR_VALUE
-        if (xstate === ATTR_VALUE_SQ) xstate = ATTR_VALUE
-        if (xstate === ATTR_VALUE_W) xstate = ATTR_VALUE
-        if (xstate === ATTR) xstate = ATTR_KEY
-        p.push([ VAR, xstate, arg ])
-        parts.push.apply(parts, p)
-      } else parts.push.apply(parts, parse(strings[i]))
-    }
-
-    var tree = [null,{},[]]
-    var stack = [[tree,-1]]
-    for (var i = 0; i < parts.length; i++) {
-      var cur = stack[stack.length-1][0]
-      var p = parts[i], s = p[0]
-      if (s === OPEN && /^\//.test(p[1])) {
-        var ix = stack[stack.length-1][1]
-        if (stack.length > 1) {
-          stack.pop()
-          stack[stack.length-1][0][2][ix] = h(
-            cur[0], cur[1], cur[2].length ? cur[2] : undefined
-          )
-        }
-      } else if (s === OPEN) {
-        var c = [p[1],{},[]]
-        cur[2].push(c)
-        stack.push([c,cur[2].length-1])
-      } else if (s === ATTR_KEY || (s === VAR && p[1] === ATTR_KEY)) {
-        var key = ''
-        var copyKey
-        for (; i < parts.length; i++) {
-          if (parts[i][0] === ATTR_KEY) {
-            key = concat(key, parts[i][1])
-          } else if (parts[i][0] === VAR && parts[i][1] === ATTR_KEY) {
-            if (typeof parts[i][2] === 'object' && !key) {
-              for (copyKey in parts[i][2]) {
-                if (parts[i][2].hasOwnProperty(copyKey) && !cur[1][copyKey]) {
-                  cur[1][copyKey] = parts[i][2][copyKey]
-                }
-              }
-            } else {
-              key = concat(key, parts[i][2])
-            }
-          } else break
-        }
-        if (parts[i][0] === ATTR_EQ) i++
-        var j = i
-        for (; i < parts.length; i++) {
-          if (parts[i][0] === ATTR_VALUE || parts[i][0] === ATTR_KEY) {
-            if (!cur[1][key]) cur[1][key] = strfn(parts[i][1])
-            else cur[1][key] = concat(cur[1][key], parts[i][1])
-          } else if (parts[i][0] === VAR
-          && (parts[i][1] === ATTR_VALUE || parts[i][1] === ATTR_KEY)) {
-            if (!cur[1][key]) cur[1][key] = strfn(parts[i][2])
-            else cur[1][key] = concat(cur[1][key], parts[i][2])
-          } else {
-            if (key.length && !cur[1][key] && i === j
-            && (parts[i][0] === CLOSE || parts[i][0] === ATTR_BREAK)) {
-              // https://html.spec.whatwg.org/multipage/infrastructure.html#boolean-attributes
-              // empty string is falsy, not well behaved value in browser
-              cur[1][key] = key.toLowerCase()
-            }
-            break
-          }
-        }
-      } else if (s === ATTR_KEY) {
-        cur[1][p[1]] = true
-      } else if (s === VAR && p[1] === ATTR_KEY) {
-        cur[1][p[2]] = true
-      } else if (s === CLOSE) {
-        if (selfClosing(cur[0]) && stack.length) {
-          var ix = stack[stack.length-1][1]
-          stack.pop()
-          stack[stack.length-1][0][2][ix] = h(
-            cur[0], cur[1], cur[2].length ? cur[2] : undefined
-          )
-        }
-      } else if (s === VAR && p[1] === TEXT) {
-        if (p[2] === undefined || p[2] === null) p[2] = ''
-        else if (!p[2]) p[2] = concat('', p[2])
-        if (Array.isArray(p[2][0])) {
-          cur[2].push.apply(cur[2], p[2])
-        } else {
-          cur[2].push(p[2])
-        }
-      } else if (s === TEXT) {
-        cur[2].push(p[1])
-      } else if (s === ATTR_EQ || s === ATTR_BREAK) {
-        // no-op
-      } else {
-        throw new Error('unhandled: ' + s)
-      }
-    }
-
-    if (tree[2].length > 1 && /^\s*$/.test(tree[2][0])) {
-      tree[2].shift()
-    }
-
-    if (tree[2].length > 2
-    || (tree[2].length === 2 && /\S/.test(tree[2][1]))) {
-      throw new Error(
-        'multiple root elements must be wrapped in an enclosing tag'
-      )
-    }
-    if (Array.isArray(tree[2][0]) && typeof tree[2][0][0] === 'string'
-    && Array.isArray(tree[2][0][2])) {
-      tree[2][0] = h(tree[2][0][0], tree[2][0][1], tree[2][0][2])
-    }
-    return tree[2][0]
-
-    function parse (str) {
-      var res = []
-      if (state === ATTR_VALUE_W) state = ATTR
-      for (var i = 0; i < str.length; i++) {
-        var c = str.charAt(i)
-        if (state === TEXT && c === '<') {
-          if (reg.length) res.push([TEXT, reg])
-          reg = ''
-          state = OPEN
-        } else if (c === '>' && !quot(state) && state !== COMMENT) {
-          if (state === OPEN) {
-            res.push([OPEN,reg])
-          } else if (state === ATTR_KEY) {
-            res.push([ATTR_KEY,reg])
-          } else if (state === ATTR_VALUE && reg.length) {
-            res.push([ATTR_VALUE,reg])
-          }
-          res.push([CLOSE])
-          reg = ''
-          state = TEXT
-        } else if (state === COMMENT && /-$/.test(reg) && c === '-') {
-          if (opts.comments) {
-            res.push([ATTR_VALUE,reg.substr(0, reg.length - 1)],[CLOSE])
-          }
-          reg = ''
-          state = TEXT
-        } else if (state === OPEN && /^!--$/.test(reg)) {
-          if (opts.comments) {
-            res.push([OPEN, reg],[ATTR_KEY,'comment'],[ATTR_EQ])
-          }
-          reg = c
-          state = COMMENT
-        } else if (state === TEXT || state === COMMENT) {
-          reg += c
-        } else if (state === OPEN && /\s/.test(c)) {
-          res.push([OPEN, reg])
-          reg = ''
-          state = ATTR
-        } else if (state === OPEN) {
-          reg += c
-        } else if (state === ATTR && /[^\s"'=/]/.test(c)) {
-          state = ATTR_KEY
-          reg = c
-        } else if (state === ATTR && /\s/.test(c)) {
-          if (reg.length) res.push([ATTR_KEY,reg])
-          res.push([ATTR_BREAK])
-        } else if (state === ATTR_KEY && /\s/.test(c)) {
-          res.push([ATTR_KEY,reg])
-          reg = ''
-          state = ATTR_KEY_W
-        } else if (state === ATTR_KEY && c === '=') {
-          res.push([ATTR_KEY,reg],[ATTR_EQ])
-          reg = ''
-          state = ATTR_VALUE_W
-        } else if (state === ATTR_KEY) {
-          reg += c
-        } else if ((state === ATTR_KEY_W || state === ATTR) && c === '=') {
-          res.push([ATTR_EQ])
-          state = ATTR_VALUE_W
-        } else if ((state === ATTR_KEY_W || state === ATTR) && !/\s/.test(c)) {
-          res.push([ATTR_BREAK])
-          if (/[\w-]/.test(c)) {
-            reg += c
-            state = ATTR_KEY
-          } else state = ATTR
-        } else if (state === ATTR_VALUE_W && c === '"') {
-          state = ATTR_VALUE_DQ
-        } else if (state === ATTR_VALUE_W && c === "'") {
-          state = ATTR_VALUE_SQ
-        } else if (state === ATTR_VALUE_DQ && c === '"') {
-          res.push([ATTR_VALUE,reg],[ATTR_BREAK])
-          reg = ''
-          state = ATTR
-        } else if (state === ATTR_VALUE_SQ && c === "'") {
-          res.push([ATTR_VALUE,reg],[ATTR_BREAK])
-          reg = ''
-          state = ATTR
-        } else if (state === ATTR_VALUE_W && !/\s/.test(c)) {
-          state = ATTR_VALUE
-          i--
-        } else if (state === ATTR_VALUE && /\s/.test(c)) {
-          res.push([ATTR_VALUE,reg],[ATTR_BREAK])
-          reg = ''
-          state = ATTR
-        } else if (state === ATTR_VALUE || state === ATTR_VALUE_SQ
-        || state === ATTR_VALUE_DQ) {
-          reg += c
-        }
-      }
-      if (state === TEXT && reg.length) {
-        res.push([TEXT,reg])
-        reg = ''
-      } else if (state === ATTR_VALUE && reg.length) {
-        res.push([ATTR_VALUE,reg])
-        reg = ''
-      } else if (state === ATTR_VALUE_DQ && reg.length) {
-        res.push([ATTR_VALUE,reg])
-        reg = ''
-      } else if (state === ATTR_VALUE_SQ && reg.length) {
-        res.push([ATTR_VALUE,reg])
-        reg = ''
-      } else if (state === ATTR_KEY) {
-        res.push([ATTR_KEY,reg])
-        reg = ''
-      }
-      return res
-    }
-  }
-
-  function strfn (x) {
-    if (typeof x === 'function') return x
-    else if (typeof x === 'string') return x
-    else if (x && typeof x === 'object') return x
-    else return concat('', x)
-  }
-}
-
-function quot (state) {
-  return state === ATTR_VALUE_SQ || state === ATTR_VALUE_DQ
-}
-
-var hasOwn = Object.prototype.hasOwnProperty
-function has (obj, key) { return hasOwn.call(obj, key) }
-
-var closeRE = RegExp('^(' + [
-  'area', 'base', 'basefont', 'bgsound', 'br', 'col', 'command', 'embed',
-  'frame', 'hr', 'img', 'input', 'isindex', 'keygen', 'link', 'meta', 'param',
-  'source', 'track', 'wbr', '!--',
-  // SVG TAGS
-  'animate', 'animateTransform', 'circle', 'cursor', 'desc', 'ellipse',
-  'feBlend', 'feColorMatrix', 'feComposite',
-  'feConvolveMatrix', 'feDiffuseLighting', 'feDisplacementMap',
-  'feDistantLight', 'feFlood', 'feFuncA', 'feFuncB', 'feFuncG', 'feFuncR',
-  'feGaussianBlur', 'feImage', 'feMergeNode', 'feMorphology',
-  'feOffset', 'fePointLight', 'feSpecularLighting', 'feSpotLight', 'feTile',
-  'feTurbulence', 'font-face-format', 'font-face-name', 'font-face-uri',
-  'glyph', 'glyphRef', 'hkern', 'image', 'line', 'missing-glyph', 'mpath',
-  'path', 'polygon', 'polyline', 'rect', 'set', 'stop', 'tref', 'use', 'view',
-  'vkern'
-].join('|') + ')(?:[\.#][a-zA-Z0-9\u007F-\uFFFF_:-]+)*$')
-function selfClosing (tag) { return closeRE.test(tag) }
-
-
-/***/ }),
-/* 5 */
-/***/ (function(module, exports) {
-
-module.exports = attributeToProperty
-
-var transform = {
-  'class': 'className',
-  'for': 'htmlFor',
-  'http-equiv': 'httpEquiv'
-}
-
-function attributeToProperty (h) {
-  return function (tagName, attrs, children) {
-    for (var attr in attrs) {
-      if (attr in transform) {
-        attrs[transform[attr]] = attrs[attr]
-        delete attrs[attr]
-      }
-    }
-    return h(tagName, attrs, children)
-  }
-}
-
-
-/***/ }),
-/* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1440,7 +897,7 @@ module.exports = morphdom;
 
 
 /***/ }),
-/* 7 */
+/* 4 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -1457,12 +914,15 @@ class ItemView extends __WEBPACK_IMPORTED_MODULE_0__base__["a" /* default */] {
   }
 
   render() {
-    this.el = this.tmpl`
-      <section class="item" onclick=${this.handleClick}>
+    this.el = super.render(`
+      <section class="item">
         <div ref="title" class="title">${this.title}</div>
         <div ref="summary" class="summary">${this.summary}</div>
       </section>
-    `;
+    `);
+
+    this.el.addEventListener('click', this.handleClick);
+
     return this.el;
   }
 

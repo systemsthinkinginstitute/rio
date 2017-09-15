@@ -1,4 +1,3 @@
-import bel from 'bel';
 import morphdom from 'morphdom';
 
 
@@ -7,9 +6,9 @@ class View {
   constructor() {
     this.handlers = { mount: [], update: [], updated: [] };
     this.initialize.apply(this, arguments);
-    this.tmpl = bel;
     this.finalize.apply(this);
     this.refs = Refs(this);
+    this._dp = new DOMParser();
   }
 
   initialize() {
@@ -20,9 +19,11 @@ class View {
     // implement in subclass
   }
 
-  render() {
-    // implement in subclass
-    return bel`<div></div>`;
+  // subclasses must call super.render();
+  render(tmpl, contentType) {
+    if (!contentType) { contentType = 'text/html'; }
+    const doc = this._dp.parseFromString(tmpl, contentType);
+    return doc.body.firstChild;
   }
 
   mount(el) {

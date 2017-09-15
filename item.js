@@ -10,12 +10,15 @@ class ItemView extends View {
   }
 
   render() {
-    this.el = this.tmpl`
-      <section class="item" onclick=${this.handleClick}>
+    this.el = super.render(`
+      <section class="item">
         <div ref="title" class="title">${this.title}</div>
         <div ref="summary" class="summary">${this.summary}</div>
       </section>
-    `;
+    `);
+
+    this.el.addEventListener('click', this.handleClick);
+
     return this.el;
   }
 

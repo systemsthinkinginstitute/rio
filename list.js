@@ -9,12 +9,15 @@ class ListView extends View {
   }
 
   render() {
-    this.el = this.tmpl`
+    this.el = super.render(`
       <div class="listing">
         LISTING:
-        ${this.items.map(item => new ItemView(item).render())}
       </div>
-    `;
+    `);
+
+    for (const item of this.items) {
+      this.el.appendChild(new ItemView(item).render());
+    }
     return this.el;
   }
 
