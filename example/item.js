@@ -18,6 +18,25 @@ class ItemView extends View {
     `;
   }
 
+  style() {
+    return this.css`
+      section {
+        border: 1px solid #ddd;
+        margin: 5px;
+        padding: 20px;
+        border-radius: 2px;
+      }
+      section:hover {
+        background: #f6f6f6;
+        cursor: pointer;
+      }
+      .summary {
+        color: #aaa;
+        font-size: 13px;
+      }
+    `;
+  }
+
   handleClick(e) {
     this.title = "HELLO " + new Date();
     this.update();
