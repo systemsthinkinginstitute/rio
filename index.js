@@ -58,10 +58,12 @@ class View {
     const registerFn = (fn) => {
       let fid;
       if (registry.fids.has(fn)) {
+        // if we've already this one just give it back
         fid = registry.fids.get(fn);
       } else {
         fid = 'ev' + String(parseInt(Math.random() * 1000000000));
         registry.fids.set(fn, fid);
+        // proxy through with the event as an argument
         registry.fns[fid] = () => fn(window.event);
       }
       return fid;
@@ -70,18 +72,22 @@ class View {
     let output = '';
 
     for (let i = 0; i < strings.length; i++) {
+
       output += strings[i];
       if (i < expressions.length) {
         const val = expressions[i];
         if (val instanceof View) {
+          // assume we want to render if it is a view instance
           output += val.render();
         } else if (typeof val == 'function') {
+          // assume a function is an event handler and stash a reference
           const fid = registerFn(val);
           output += `"rio.fns.${fid}()"`;
         } else if (Array.isArray(val)) {
+          // we need to flatten the array to a string
           for (let i = 0; i < val.length; i++) {
             if (val[i] instanceof View) {
-              console.log("RENDERING!");
+              // assume we want to render if it is a view instance
               val[i] = val[i].render()
             }
           }
@@ -93,6 +99,8 @@ class View {
     }
 
     this._register(this.id, this);
+
+    // what could go wrong here?
     output = output.replace(/(<\w+)/, '$1 data-rio-id="' + this.id + '"');
 
     return output;
