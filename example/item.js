@@ -1,11 +1,11 @@
-import View from './base';
+import { View } from '..';
 
 
 class ItemView extends View {
 
   initialize(title) {
     this.title = title;
-    this.summary = title;
+    this.summary = String(title).substr(0, String(title).length / 2);
     this.handleClick = this.handleClick.bind(this);
   }
 
@@ -18,9 +18,17 @@ class ItemView extends View {
     `;
   }
 
-  handleClick() {
-    console.log("REF", this.refs.title);
+  handleClick(e) {
+    this.title = "HELLO " + new Date();
+    this.update();
   }
+
+  finalize() {
+    this.on('mount', () => {
+      console.log("MOUNTED", this.title);
+    });
+  }
+
 }
 
 export default ItemView;
