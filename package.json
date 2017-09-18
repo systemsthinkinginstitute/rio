@@ -1,8 +1,7 @@
 {
-  "name": "point.js",
+  "name": "rio",
   "version": "1.0.0",
   "description": "",
-  "main": "base.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

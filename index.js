@@ -20,11 +20,11 @@ class View {
     this.initialize.apply(this, arguments);
     this.finalize.apply(this);
     this.refs = Refs(this);
-    this.id = id();
+    this._id = id();
   }
 
   _register() {
-    registry.idInstances[this.id] = this;
+    registry.idInstances[this._id] = this;
   }
 
   _injectStyle() {
@@ -53,6 +53,11 @@ class View {
     }
   }
 
+  _parent(p) {
+    // allow tmpl to set the parent
+    this.parent = p;
+  }
+
   namespace() {
     // used for scoping css
     return this.constructor.name;
@@ -68,7 +73,6 @@ class View {
 
   render() {
     // implement in subclass
-    return '<div></div>';
   }
 
   tmpl(strings, ...expressions) {
@@ -86,7 +90,7 @@ class View {
         fid = 'ev' + String(parseInt(Math.random() * 1000000000));
         registry.fids.set(fn, fid);
         // proxy through with the event as an argument
-        registry.fns[fid] = () => fn(window.event);
+        registry.fns[fid] = () => fn.bind(this)(window.event);
       }
       return fid;
     }
@@ -100,6 +104,7 @@ class View {
         const val = expressions[i];
         if (val instanceof View) {
           // assume we want to render if it is a view instance
+          val._parent(this);
           output += val.render();
         } else if (typeof val == 'function') {
           // assume a function is an event handler and stash a reference
@@ -114,16 +119,18 @@ class View {
             }
           }
           output += val.join('');
+        } else if (val === null || val === undefined) {
+          output += '';
         } else {
           output += val;
         }
       }
     }
 
-    this._register(this.id, this);
+    this._register(this._id, this);
 
     // what could go wrong here?
-    output = output.replace(/(<\w+)/, '$1 data-rio-id="' + this.id + '" data-rio-view="' + this.namespace() + '"');
+    output = output.replace(/(<\w+)/, '$1 data-rio-id="' + this._id + '" data-rio-view="' + this.namespace() + '"');
 
     return output;
   }
@@ -136,10 +143,8 @@ class View {
         output += expressions[i];
       }
     }
-
     const namespace = `[data-rio-view=${this.namespace()}]`;
     output = css.serialize(css.namespace(output, namespace));
-
     return output;
   }
 
@@ -157,6 +162,10 @@ class View {
     this.el.innerHTML = this.html;
     this._harvestViews();
     this.dispatch('mount');
+  }
+
+  unmount() {
+    this.el.innerHTML = '';
   }
 
   update() {
@@ -182,6 +191,7 @@ class View {
   get root() {
     return this.el;
   }
+
 }
 
 function Refs(view) {
@@ -201,7 +211,6 @@ function Refs(view) {
 }
 
 
-const rio = { fns: registry.fns };
+const rio = { fns: registry.fns, View };
 
 export { View, rio };
-
