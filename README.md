@@ -66,6 +66,20 @@ render() {
 }
 ```
 
+Iterate using standard `map` and render other views with regular instantiation:
+
+```javascript
+render() {
+  const greetings = ['Hello', 'Salut', 'Shalom'];
+  return this.tmpl`
+    <div class="greetings">
+      ${greetings.map(g => new GreetingView(g))}
+    </div>  
+  `;
+}
+```
+
+
 #### style()
 
 Optionally specify css styles to be injected.  Use `this.css` tag to support scoping css.
