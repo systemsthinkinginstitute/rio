@@ -13,9 +13,10 @@ class GreeterView extends rio.View {
 
   render() {
     // event handlers will be interpolated and bound
+    const greeting = this.greetings[this.index];
     return this.tmpl`
       <h1 onclick=${this.cycleGreeting}>
-        ${this.greeting}, World!
+        ${greeting}, World!
       </h1>
     `;
   }
@@ -33,7 +34,7 @@ class GreeterView extends rio.View {
   finalize() {
     this.on('mount', () => {
       console.log("We're live!");
-    }
+    });
   }
 
   cycleGreeting(e) {
