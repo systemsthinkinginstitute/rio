@@ -16,11 +16,15 @@ const id = () => {
 class View {
 
   constructor() {
+    const key = this.key(...arguments);
+    if (registry.idInstances[key]) {
+      return registry.idInstances[key];
+    }
     this.handlers = { mount: [], update: [], updated: [] };
     this.initialize.apply(this, arguments);
     this.finalize.apply(this);
     this.refs = Refs(this);
-    this._id = id();
+    this._id = key;
   }
 
   _register() {
@@ -152,6 +156,10 @@ class View {
     // implement in subclass
   }
 
+  key() {
+    throw new Error("Please define a key method that returns a deterministic key for a given instance.");
+  }
+
   mount(el) {
     try {
       window.rio = rio;
@@ -169,9 +177,26 @@ class View {
   }
 
   update() {
+
+    if (!this.el) return;
+
     this.dispatch('update');
     const newHTML = this.render().trim();
-    morphdom(this.el, newHTML);
+
+    morphdom(this.el, newHTML, {
+      onBeforeNodeDiscarded: node => {
+        return node.nodeType == Node.ELEMENT_NODE && !node.hasAttribute('rio-sacrosanct')
+      },
+      onNodeAdded: node => {
+        if (node.nodeType == Node.ELEMENT_NODE && node.hasAttribute('data-rio-view') && node.hasAttribute('data-rio-id')) {
+          const rioId = node.getAttribute('data-rio-id');
+          const instance = registry.idInstances[rioId];
+          instance.el = node;
+          instance.dispatch('mount');
+        }
+      }
+    });
+
     this.dispatch('updated');
   }
 
@@ -187,6 +212,7 @@ class View {
       handler.call(this);
     }
   }
+
 
   get root() {
     return this.el;
@@ -213,4 +239,4 @@ function Refs(view) {
 
 const rio = { fns: registry.fns, View };
 
-export { View, rio };
+export { rio, View }
