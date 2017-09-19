@@ -51,13 +51,13 @@ export default GreeterView;
 
 Create views by extending the `View` base class and defining methods below.  Required are `key()` and `render()` while others are optional.
 
-#### initialize(_...arguments_)
+#### initialize()
 
 Run initialization code upon instantiation and receives args passed through to the constructor.
 
-#### key(_...arguments_)
+#### key()
 
-Return a unique string to identifiy this view instance; runs as the very first step upon instantiation, so expect nothing on `this`. 
+Return a unique string to identifiy this view instance.  Receives the same args as the constructor, and runs as the very first step upon instantiation, so expect nothing on `this`. 
 
 #### render()
 
