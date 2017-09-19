@@ -49,11 +49,15 @@ export default GreeterView;
 
 ## Methods to Define
 
-Create views by extending the `View` base class and defining methods below.
+Create views by extending the `View` base class and defining methods below.  Required are `key()` and `render()` while others are optional.
 
-#### initialize(_args_)
+#### initialize(_...arguments_)
 
 Run initialization code upon instantiation and receives args passed through to the constructor.
+
+#### key(_...arguments_)
+
+Return a unique string to identifiy this view instance; runs as the very first step upon instantiation, so expect nothing on `this`. 
 
 #### render()
 
@@ -130,3 +134,8 @@ The `root` property is an element reference to the top-level DOM node within the
 #### parent
 
 Reference to the parent view instance (if any) that caused this view to come into being. 
+
+## Tips
+
+- Set the `rio-sacrosanct` attribute on any elements you wish for rio to ignore during view updates
+
