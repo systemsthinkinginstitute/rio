@@ -20,11 +20,14 @@ class View {
     if (registry.idInstances[key]) {
       return registry.idInstances[key];
     }
-    this.handlers = { mount: [], update: [], updated: [] };
+    this.handlers = { mount: [], update: [], updated: [], unmount: [] };
     this.initialize.apply(this, arguments);
     this.finalize.apply(this);
     this.refs = Refs(this);
     this._id = key;
+    this._fids = [];
+    this.parent = null;
+    registry.fids.set(this, new WeakMap());
   }
 
   _register() {
@@ -86,15 +89,19 @@ class View {
     }
 
     const registerFn = (fn) => {
+
       let fid;
-      if (registry.fids.has(fn)) {
-        // if we've already this one just give it back
-        fid = registry.fids.get(fn);
+      if (registry.fids.get(this).has(fn)) {
+        fid = registry.fids.get(this).get(fn);
       } else {
-        fid = 'ev' + String(parseInt(Math.random() * 1000000000));
-        registry.fids.set(fn, fid);
-        // proxy through with the event as an argument
-        registry.fns[fid] = () => fn.bind(this)(window.event);
+        fid = 'ev' + String(parseInt(Math.random() * Number.MAX_SAFE_INTEGER - 1));
+        const boundFn = () => {
+          fn.bind(this)(window.event);
+          return window.event.defaultPrevented;
+        }
+        registry.fids.get(this).set(fn, fid);
+        registry.fns[fid] = boundFn;
+        this._fids.push(fid);
       }
       return fid;
     }
@@ -119,6 +126,7 @@ class View {
           for (let i = 0; i < val.length; i++) {
             if (val[i] instanceof View) {
               // assume we want to render if it is a view instance
+              val[i]._parent(this);
               val[i] = val[i].render()
             }
           }
@@ -173,7 +181,13 @@ class View {
   }
 
   unmount() {
-    this.el.innerHTML = '';
+    // deregister our  event listeners
+    for (let fid of this._fids) {
+      delete registry.fns[fid];
+    }
+    if (this.el && this.el.parentNode) {
+      this.el.parentNode.removeChild(this.el);
+    }
   }
 
   update() {
@@ -183,12 +197,28 @@ class View {
     this.dispatch('update');
     const newHTML = this.render().trim();
 
+    function isElement(node) {
+      return node.nodeType == Node.ELEMENT_NODE;
+    }
+
     morphdom(this.el, newHTML, {
+      getNodeKey: node => {
+        return isElement(node) ? node.getAttribute('data-rio-id') || node.id : node.id;
+      },
+      onNodeDiscarded: node => {
+        if (isElement(node) && node.hasAttribute('data-rio-id')) {
+          const rioId = node.getAttribute('data-rio-id');
+          const instance = registry.idInstances[rioId];
+          instance.dispatch('unmount');
+          instance.unmount();
+        }
+      },
       onBeforeNodeDiscarded: node => {
-        return node.nodeType == Node.ELEMENT_NODE && !node.hasAttribute('rio-sacrosanct')
+        // don't remove elements with rio-sacrosanct attribute
+        return isElement(node) && !node.hasAttribute('rio-sacrosanct')
       },
       onNodeAdded: node => {
-        if (node.nodeType == Node.ELEMENT_NODE && node.hasAttribute('data-rio-view') && node.hasAttribute('data-rio-id')) {
+        if (isElement(node) && node.hasAttribute('data-rio-view') && node.hasAttribute('data-rio-id')) {
           const rioId = node.getAttribute('data-rio-id');
           const instance = registry.idInstances[rioId];
           instance.el = node;
@@ -212,7 +242,6 @@ class View {
       handler.call(this);
     }
   }
-
 
   get root() {
     return this.el;
@@ -240,3 +269,4 @@ function Refs(view) {
 const rio = { fns: registry.fns, View };
 
 export { rio, View }
+
