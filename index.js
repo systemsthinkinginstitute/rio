@@ -27,6 +27,8 @@ class View {
     this._id = key;
     this._fids = [];
     this.parent = null;
+    this._updatedQueue = [];
+    this._mounted = false;
     registry.fids.set(this, new WeakMap());
   }
 
@@ -56,6 +58,7 @@ class View {
     }
 
     for (const instance of descendants) {
+      instance._mounted = true;
       instance.dispatch('mount');
     }
   }
@@ -80,6 +83,16 @@ class View {
 
   render() {
     // implement in subclass
+  }
+
+  _renderView(view) {
+    view._parent(this);
+    if (view._mounted)
+      view.dispatch('update');
+    const output = view.render();
+    if (view._mounted)
+      this._updatedQueue.push(view);
+    return output;
   }
 
   tmpl(strings, ...expressions) {
@@ -107,6 +120,7 @@ class View {
     }
 
     let output = '';
+    this._updatedQueue.length = 0;
 
     for (let i = 0; i < strings.length; i++) {
 
@@ -115,8 +129,7 @@ class View {
         const val = expressions[i];
         if (val instanceof View) {
           // assume we want to render if it is a view instance
-          val._parent(this);
-          output += val.render();
+          output += this._renderView(val);
         } else if (typeof val == 'function') {
           // assume a function is an event handler and stash a reference
           const fid = registerFn(val);
@@ -125,9 +138,7 @@ class View {
           // we need to flatten the array to a string
           for (let i = 0; i < val.length; i++) {
             if (val[i] instanceof View) {
-              // assume we want to render if it is a view instance
-              val[i]._parent(this);
-              val[i] = val[i].render()
+              val[i] = this._renderView(val[i]);
             }
           }
           output += val.join('');
@@ -177,6 +188,7 @@ class View {
     this._injectStyle();
     this.el.innerHTML = this.html;
     this._harvestViews();
+    this._mounted = true;
     this.dispatch('mount');
   }
 
@@ -227,6 +239,11 @@ class View {
       }
     });
 
+    while (this._updatedQueue.length) {
+      const view = this._updatedQueue.shift();
+      view.dispatch('updated');
+    }
+
     this.dispatch('updated');
   }
 
@@ -256,9 +273,13 @@ function Refs(view) {
       if (target[name]) {
         return target[name];
       }
-      const el = view.el.querySelector(`[ref=${name}]`);
-      target[name] = el;
-      return el;
+      if (view.el) {
+        const el = view.el.querySelector(`[ref=${name}]`);
+        target[name] = el;
+        return el;
+      } else {
+        return null;
+      }
     }
   }
 
