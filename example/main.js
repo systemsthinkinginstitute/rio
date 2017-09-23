@@ -1,18 +1,9 @@
 import { rio } from '..';
 
 import ListView from './list.js';
+import store from './store.js';
 
-const items = [];
 
-for (let i = 0; i < 3; i++) {
-  items.push(String(Math.random()));
-}
-
-const startTime = new Date().getTime();
-
-const app = new ListView(items);
+const app = new ListView(store.items);
 app.mount(document.getElementById("main"));
 
-const elapsedTime = new Date().getTime() - startTime;
-
-console.log("ELAPSED", elapsedTime);

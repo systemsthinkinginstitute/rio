@@ -1,4 +1,5 @@
 import { View } from '..';
+import store from './store';
 import ItemView from './item';
 
 
@@ -6,15 +7,6 @@ class ListView extends View {
 
   initialize(items) {
     this.items = items;
-  }
-
-  render() {
-    return this.tmpl`
-      <section class="listing">
-        <h1>A beautiful listing...</h1>
-        ${this.items.map(item => new ItemView(item))}
-      </section>
-    `;
   }
 
   style() {
@@ -32,6 +24,32 @@ class ListView extends View {
         margin: 20px;
         padding: 20px;
       }
+    `;
+  }
+
+  addItem(e) {
+    e.preventDefault();
+    this.items.push({
+      id: Math.random(),
+      title: this.refs.input.value
+    });
+    this.update();
+  }
+
+  key() {
+    return 'ListView';
+  }
+
+  render() {
+    return this.tmpl`
+      <section class="listing">
+        <h1>Things to do...</h1>
+        <form class="add-row" onsubmit=${this.addItem}>
+          <input type="text" ref="input">
+          <button onclick=${this.addItem}>add</button>
+        </form>
+        ${this.items.map(item => new ItemView(item))}
+      </section>
     `;
   }
 
