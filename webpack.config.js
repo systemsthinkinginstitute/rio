@@ -1,8 +1,20 @@
+const webpack = require('webpack');
+
 module.exports = {
-    entry: './example/main.js',
-    output: {
-        path: __dirname + "/example",
-        filename: 'bundle.js',
-        publicPath: '/example'
-    }
-}
+  entry: ['./index.js'],
+  output: {
+    filename: 'dist.js'
+  },
+  module: {
+    loaders: [
+      {
+        test: /\.js$/,
+        exclude: /node_modules/,
+        loader: 'babel-loader',
+        options: {
+          presets: ['es2015']
+        },
+      }
+    ]
+  }
+};
