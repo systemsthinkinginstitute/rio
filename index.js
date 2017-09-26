@@ -109,6 +109,9 @@ class View {
   }
 
   _renderView(view) {
+    if (view._mounted && !view.shouldUpdate()) {
+      return '';
+    }
     view._parent(this);
     const viewName = view.namespace();
     this.views[viewName] = this.views[viewName] || [];
@@ -231,6 +234,10 @@ class View {
     }
   }
 
+  shouldUpdate() {
+    return true;
+  }
+
   update() {
     // rerender the view and morph the dom to match
     if (!this.el) return;
@@ -257,6 +264,14 @@ class View {
       onBeforeNodeDiscarded: node => {
         // don't remove elements with rio-sacrosanct attribute
         return isElement(node) && !node.hasAttribute('rio-sacrosanct')
+      },
+      onBeforeElUpdated: node => {
+        if (isElement(node) && node.hasAttribute('data-rio-id')) {
+          const rioId = node.getAttribute('data-rio-id');
+          const instance = registry.idInstances[rioId];
+
+          if (!instance.shouldUpdate()) return false;
+        }
       },
       onBeforeNodeAdded: node => {
         // transplant existing view instance to its new element if need be

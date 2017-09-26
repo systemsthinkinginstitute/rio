@@ -297,6 +297,9 @@ var View = function () {
   }, {
     key: '_renderView',
     value: function _renderView(view) {
+      if (view._mounted && !view.shouldUpdate()) {
+        return '';
+      }
       view._parent(this);
       var viewName = view.namespace();
       this.views[viewName] = this.views[viewName] || [];
@@ -451,6 +454,11 @@ var View = function () {
       }
     }
   }, {
+    key: 'shouldUpdate',
+    value: function shouldUpdate() {
+      return true;
+    }
+  }, {
     key: 'update',
     value: function update() {
       // rerender the view and morph the dom to match
@@ -478,6 +486,14 @@ var View = function () {
         onBeforeNodeDiscarded: function onBeforeNodeDiscarded(node) {
           // don't remove elements with rio-sacrosanct attribute
           return isElement(node) && !node.hasAttribute('rio-sacrosanct');
+        },
+        onBeforeElUpdated: function onBeforeElUpdated(node) {
+          if (isElement(node) && node.hasAttribute('data-rio-id')) {
+            var rioId = node.getAttribute('data-rio-id');
+            var instance = registry.idInstances[rioId];
+
+            if (!instance.shouldUpdate()) return false;
+          }
         },
         onBeforeNodeAdded: function onBeforeNodeAdded(node) {
           // transplant existing view instance to its new element if need be
