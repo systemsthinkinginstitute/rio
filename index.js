@@ -18,6 +18,7 @@ class View {
   constructor() {
     const key = this.key(...arguments);
     if (registry.idInstances[key]) {
+      // give back an existing instance if we already have
       return registry.idInstances[key];
     }
     this.handlers = { mount: [], update: [], updated: [], unmount: [] };
@@ -33,6 +34,35 @@ class View {
     this.views = {};
     registry.fids.set(this, new WeakMap());
   }
+
+  /* methods to override */
+
+  namespace() {
+    // used for scoping css
+    return this.constructor.name;
+  }
+
+  initialize() {
+    // implement in subclass
+  }
+
+  finalize() {
+    // implement in subclass
+  }
+
+  render() {
+    // implement in subclass
+  }
+
+  style() {
+    // implement in subclass
+  }
+
+  key() {
+    throw new Error("Please define a 'key' method that returns a deterministic key for a given instance.");
+  }
+
+  /* helper methods */
 
   _register() {
     registry.idInstances[this._id] = this;
@@ -78,23 +108,6 @@ class View {
     this.parent = p;
   }
 
-  namespace() {
-    // used for scoping css
-    return this.constructor.name;
-  }
-
-  initialize() {
-    // implement in subclass
-  }
-
-  finalize() {
-    // implement in subclass
-  }
-
-  render() {
-    // implement in subclass
-  }
-
   _renderView(view) {
     view._parent(this);
     const viewName = view.namespace();
@@ -109,7 +122,11 @@ class View {
     return output;
   }
 
+  /* public interface */
+
   tmpl(strings, ...expressions) {
+
+    // tag function for interpolating templates
 
     if (!registry.styles.find(s => s[0] == this.namespace())) {
       registry.styles.push([this.namespace(), this.style()]);
@@ -166,13 +183,14 @@ class View {
 
     this._register(this._id, this);
 
-    // what could go wrong here?
+    // tack our id and view name onto the root element of the view
     output = output.replace(/(<[\w\-]+)/, '$1 data-rio-id="' + this._id + '" data-rio-view="' + this.namespace() + '"');
 
     return output;
   }
 
   css(strings, ...expressions) {
+    // tag function for interpolating css
     let output = '';
     for (let i = 0; i < strings.length; i++) {
       output += strings[i];
@@ -183,14 +201,6 @@ class View {
     const namespace = `[data-rio-view=${this.namespace()}]`;
     output = css.serialize(css.namespace(output, namespace));
     return output;
-  }
-
-  style() {
-    // implement in subclass
-  }
-
-  key() {
-    throw new Error("Please define a key method that returns a deterministic key for a given instance.");
   }
 
   mount(el) {
@@ -209,9 +219,11 @@ class View {
     for (let fid of this._fids) {
       delete registry.fns[fid];
     }
+    // remove any associated element from the dom
     if (this.el && this.el.parentNode) {
       this.el.parentNode.removeChild(this.el);
     }
+    // remove ourself from our parent's views listing
     if (this.parent) {
       const viewName = this.namespace();
       const index = this.parent.views[viewName].findIndex(v => v == this);
@@ -220,9 +232,8 @@ class View {
   }
 
   update() {
-
+    // rerender the view and morph the dom to match
     if (!this.el) return;
-
     this.dispatch('update');
     const newHTML = this.render().trim();
 
