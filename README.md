@@ -130,4 +130,6 @@ Reference to the parent view instance (if any) that caused this view to come int
 ## Tips
 
 - Set the `rio-sacrosanct` attribute on any elements you wish for rio to ignore during view updates
+## License
+MIT
 
