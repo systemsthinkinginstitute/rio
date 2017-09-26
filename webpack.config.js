@@ -3,7 +3,8 @@ const webpack = require('webpack');
 module.exports = {
   entry: ['./index.js'],
   output: {
-    filename: 'dist.js'
+    filename: 'dist.js',
+    libraryTarget: 'umd'
   },
   module: {
     loaders: [
