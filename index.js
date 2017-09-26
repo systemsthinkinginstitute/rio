@@ -29,6 +29,8 @@ class View {
     this.parent = null;
     this._updatedQueue = [];
     this._mounted = false;
+    this._depth = 0;
+    this.views = {};
     registry.fids.set(this, new WeakMap());
   }
 
@@ -50,17 +52,25 @@ class View {
   _harvestViews() {
     // deal with views and elements we've just mounted
     const els = Array.from(this.el.querySelectorAll('[data-rio-id]'));
-    const descendants = [];
+    let descendants = [];
     for (const el of els) {
       const instance = registry.idInstances[el.getAttribute('data-rio-id')];
       instance.el = el;
       descendants.push(instance);
     }
 
+    descendants = descendants
+      .sort((a, b) => b._depth - a._depth);
+
     for (const instance of descendants) {
-      instance._mounted = true;
       instance.dispatch('mount');
+      instance._mounted = true;
     }
+  }
+
+  _setEl(el) {
+    this.el = el;
+    this.refs = Refs(this);
   }
 
   _parent(p) {
@@ -87,6 +97,10 @@ class View {
 
   _renderView(view) {
     view._parent(this);
+    const viewName = view.namespace();
+    this.views[viewName] = this.views[viewName] || [];
+    this.views[viewName].push(view);
+    view._depth = this._depth + 1;
     if (view._mounted)
       view.dispatch('update');
     const output = view.render();
@@ -153,7 +167,7 @@ class View {
     this._register(this._id, this);
 
     // what could go wrong here?
-    output = output.replace(/(<\w+)/, '$1 data-rio-id="' + this._id + '" data-rio-view="' + this.namespace() + '"');
+    output = output.replace(/(<[\w\-]+)/, '$1 data-rio-id="' + this._id + '" data-rio-view="' + this.namespace() + '"');
 
     return output;
   }
@@ -188,8 +202,6 @@ class View {
     this._injectStyle();
     this.el.innerHTML = this.html;
     this._harvestViews();
-    this._mounted = true;
-    this.dispatch('mount');
   }
 
   unmount() {
@@ -199,6 +211,11 @@ class View {
     }
     if (this.el && this.el.parentNode) {
       this.el.parentNode.removeChild(this.el);
+    }
+    if (this.parent) {
+      const viewName = this.namespace();
+      const index = this.parent.views[viewName].findIndex(v => v == this);
+      this.parent.views[viewName].splice(index, 1);
     }
   }
 
@@ -218,6 +235,7 @@ class View {
         return isElement(node) ? node.getAttribute('data-rio-id') || node.id : node.id;
       },
       onNodeDiscarded: node => {
+        // unmount our associated instance
         if (isElement(node) && node.hasAttribute('data-rio-id')) {
           const rioId = node.getAttribute('data-rio-id');
           const instance = registry.idInstances[rioId];
@@ -229,12 +247,27 @@ class View {
         // don't remove elements with rio-sacrosanct attribute
         return isElement(node) && !node.hasAttribute('rio-sacrosanct')
       },
+      onBeforeNodeAdded: node => {
+        // transplant existing view instance to its new element if need be
+        if (isElement(node) && node.hasAttribute('data-rio-id')) {
+          const rioId = node.getAttribute('data-rio-id');
+          const instance = registry.idInstances[rioId];
+          // if the old element is in the dom, remove it and throw it away
+          if (instance && instance.el && instance.el.parentNode) {
+            instance.el.parentNode.removeChild(instance.el);
+          }
+          instance._setEl(node);
+        }
+      },
       onNodeAdded: node => {
+        // mount our view instance if it is new
         if (isElement(node) && node.hasAttribute('data-rio-view') && node.hasAttribute('data-rio-id')) {
           const rioId = node.getAttribute('data-rio-id');
           const instance = registry.idInstances[rioId];
           instance.el = node;
-          instance.dispatch('mount');
+          if (!instance._mounted) {
+            instance.dispatch('mount');
+          }
         }
       }
     });
@@ -290,4 +323,3 @@ function Refs(view) {
 const rio = { fns: registry.fns, View };
 
 export { rio, View }
-
