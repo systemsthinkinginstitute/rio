@@ -1,7 +1,7 @@
 {
   "name": "rio",
   "version": "1.0.0",
-  "description": "Faster, lighter version of riot.js",
+  "description": "Web application micro-framework heavily inspired by Riot.js",
   "main": "dist.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
