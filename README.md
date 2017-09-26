@@ -3,8 +3,9 @@
 Rio is inspired by <a href="http://riotjs.com/">riot.js</a>.
 
 ```javascript
+import { View } from 'rio';
 
-class GreeterView extends rio.View {
+class GreeterView extends View {
 
   initialize() {
     this.greetings = ['Hello', 'Salut'];
@@ -31,20 +32,15 @@ class GreeterView extends rio.View {
     `;
   }
 
-  finalize() {
-    this.on('mount', () => {
-      console.log("We're live!");
-    });
-  }
-
   cycleGreeting(e) {
-    this.greeting = this.greetings[++this.index % greetings.length];
+    this.index = ++this.index % this.greetings.length;
+    this.update();
   }
 
+  key() {
+    return 'greeter';
+  }
 }
-
-export default GreeterView;
-
 ```
 
 ## Methods to Define
@@ -57,11 +53,11 @@ Run initialization code upon instantiation and receives args passed through to t
 
 #### key()
 
-Return a unique string to identifiy this view instance.  Receives the same args as the constructor, and runs as the very first step upon instantiation, so expect nothing on `this`. 
+This method should return a string to deterministically and uniquely identifiy this view instance.  Receives the same args as the constructor, and runs as the very first step upon instantiation, so expect nothing on `this`.
 
 #### render()
 
-Renders the view to a string suitable for inserting into the DOM via Element#innerHTML.  Use `this.tmpl` tag to support iteration and binding event handlers.
+Render the view to a string suitable for inserting into the DOM via Element#innerHTML.  Use `this.tmpl` tag to support iteration and binding event handlers.
 
 ```javascript
 render() {
@@ -98,10 +94,6 @@ style() {
   `;
 }
 ```
-
-#### finalize()
-
-Run code just after instantiation, for example to attach lifecycle event handlers.
 
 ## Base Methods
 
