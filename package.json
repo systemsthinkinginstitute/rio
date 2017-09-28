@@ -1,8 +1,8 @@
 {
   "name": "rio",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Web application micro-framework heavily inspired by Riot.js",
-  "main": "dist.js",
+  "main": "rio.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -21,8 +21,11 @@
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
+    "babel-core": "^6.26.0",
     "babel-loader": "^7.1.2",
+    "babel-preset-es2015": "^6.24.1",
     "babel-preset-latest": "^6.24.1",
+    "uglifyjs-webpack-plugin": "^0.4.6",
     "webpack": "^3.6.0"
   }
 }

@@ -1,4 +1,4 @@
-import { View } from '..';
+import { View } from '../rio';
 import store from './store';
 
 

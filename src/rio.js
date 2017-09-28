@@ -1,5 +1,5 @@
 import morphdom from 'morphdom';
-import css from './lib/css';
+import css from './css';
 
 
 const registry = {

@@ -1,11 +1,21 @@
 const webpack = require('webpack');
+const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
 
 module.exports = {
-  entry: ['./index.js'],
+  entry: {
+    'rio.js': './src/rio.js',
+    'rio.min.js': './src/rio.js',
+  },
   output: {
-    filename: 'dist.js',
+    filename: '[name]',
     libraryTarget: 'umd'
   },
+  plugins: [
+    new UglifyJSPlugin({
+      minimize: true,
+      include: /\.min\.js$/
+    })
+  ],
   module: {
     loaders: [
       {
@@ -19,3 +29,6 @@ module.exports = {
     ]
   }
 };
+
+
+

@@ -1,4 +1,4 @@
-import { rio } from '..';
+import { rio } from '../rio';
 
 import ListView from './list.js';
 import store from './store.js';
