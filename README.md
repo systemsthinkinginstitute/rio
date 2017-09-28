@@ -130,6 +130,9 @@ Reference to the parent view instance (if any) that caused this view to come int
 ## Tips
 
 - Set the `rio-sacrosanct` attribute on any elements you wish for rio to ignore during view updates
+- Set the `rio-uninterruptable-input` attribute on any input whose contents should not be clobbered while it has focus
+
 ## License
+
 MIT
 

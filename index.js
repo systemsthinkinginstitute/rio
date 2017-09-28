@@ -272,6 +272,10 @@ class View {
 
           if (!instance.shouldUpdate()) return false;
         }
+        if (isElement(node) && document.activeElement == node && node.hasAttribute('rio-uninterruptable-input')) {
+          // don't update the focused element if it is uninterruptable
+          return false;
+        }
       },
       onBeforeNodeAdded: node => {
         // transplant existing view instance to its new element if need be
