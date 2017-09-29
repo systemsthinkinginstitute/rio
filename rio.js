@@ -105,7 +105,8 @@ var registry = {
   idInstances: {},
   fns: {},
   fids: new WeakMap(),
-  styles: []
+  styles: [],
+  updateOpts: {}
 };
 
 var id = function id() {
@@ -290,8 +291,10 @@ var View = function () {
   }, {
     key: '_renderView',
     value: function _renderView(view) {
-      if (view._mounted && !view.shouldUpdate()) {
-        return '';
+      if (view._mounted && view.shouldUpdate(registry.updateOpts) === false) {
+        var html = view.el.outerHTML;
+        html = html.replace(/(<[\w\-]+)/, '$1 data-rio-should-render-false');
+        return html;
       }
       view._parent(this);
       var viewName = view.namespace();
@@ -453,76 +456,86 @@ var View = function () {
     }
   }, {
     key: 'update',
-    value: function update() {
+    value: function update(opts) {
       // rerender the view and morph the dom to match
+      //
+      //
+      if (this._mounted && this.shouldUpdate(opts) === false) {
+        return;
+      }
+
       if (!this.el) return;
       this.dispatch('update');
       var newHTML = this.render().trim();
+      registry.updateOpts = opts;
+      try {
+        var isElement = function isElement(node) {
+          return node.nodeType == Node.ELEMENT_NODE;
+        };
 
-      function isElement(node) {
-        return node.nodeType == Node.ELEMENT_NODE;
-      }
-
-      (0, _morphdom2.default)(this.el, newHTML, {
-        getNodeKey: function getNodeKey(node) {
-          return isElement(node) ? node.getAttribute('data-rio-id') || node.id : node.id;
-        },
-        onNodeDiscarded: function onNodeDiscarded(node) {
-          // unmount our associated instance
-          if (isElement(node) && node.hasAttribute('data-rio-id')) {
-            var rioId = node.getAttribute('data-rio-id');
-            var instance = registry.idInstances[rioId];
-            instance.dispatch('unmount');
-            instance.unmount();
-          }
-        },
-        onBeforeNodeDiscarded: function onBeforeNodeDiscarded(node) {
-          // don't remove elements with rio-sacrosanct attribute
-          return isElement(node) && !node.hasAttribute('rio-sacrosanct');
-        },
-        onBeforeElUpdated: function onBeforeElUpdated(node) {
-          if (isElement(node) && node.hasAttribute('data-rio-id')) {
-            var rioId = node.getAttribute('data-rio-id');
-            var instance = registry.idInstances[rioId];
-
-            if (!instance.shouldUpdate()) return false;
-          }
-          if (isElement(node) && document.activeElement == node && node.hasAttribute('rio-uninterruptable-input')) {
-            // don't update the focused element if it is uninterruptable
-            return false;
-          }
-        },
-        onBeforeNodeAdded: function onBeforeNodeAdded(node) {
-          // transplant existing view instance to its new element if need be
-          if (isElement(node) && node.hasAttribute('data-rio-id')) {
-            var rioId = node.getAttribute('data-rio-id');
-            var instance = registry.idInstances[rioId];
-            // if the old element is in the dom, remove it and throw it away
-            if (instance && instance.el && instance.el.parentNode) {
-              instance.el.parentNode.removeChild(instance.el);
+        (0, _morphdom2.default)(this.el, newHTML, {
+          getNodeKey: function getNodeKey(node) {
+            return isElement(node) ? node.getAttribute('data-rio-id') || node.id : node.id;
+          },
+          onNodeDiscarded: function onNodeDiscarded(node) {
+            // unmount our associated instance
+            if (isElement(node) && node.hasAttribute('data-rio-id')) {
+              var rioId = node.getAttribute('data-rio-id');
+              var instance = registry.idInstances[rioId];
+              instance.dispatch('unmount');
+              instance.unmount();
             }
-            instance._setEl(node);
-          }
-        },
-        onNodeAdded: function onNodeAdded(node) {
-          // mount our view instance if it is new
-          if (isElement(node) && node.hasAttribute('data-rio-view') && node.hasAttribute('data-rio-id')) {
-            var rioId = node.getAttribute('data-rio-id');
-            var instance = registry.idInstances[rioId];
-            instance.el = node;
-            if (!instance._mounted) {
-              instance.dispatch('mount');
+          },
+          onBeforeNodeDiscarded: function onBeforeNodeDiscarded(node) {
+            // don't remove elements with rio-sacrosanct attribute
+            return isElement(node) && !node.hasAttribute('rio-sacrosanct');
+          },
+          onBeforeElUpdated: function onBeforeElUpdated(fromNode, toNode) {
+            if (toNode.hasAttribute('data-rio-should-render-false')) {
+              return false;
+            }
+            if (isElement(fromNode) && document.activeElement == fromNode && fromNode.hasAttribute('rio-uninterruptable-input')) {
+              // don't update the focused element if it is uninterruptable
+              return false;
+            }
+          },
+          onBeforeNodeAdded: function onBeforeNodeAdded(node) {
+            // transplant existing view instance to its new element if need be
+            if (isElement(node) && node.hasAttribute('data-rio-id')) {
+              var rioId = node.getAttribute('data-rio-id');
+              var instance = registry.idInstances[rioId];
+              // if the old element is in the dom, remove it and throw it away
+              if (instance && instance.el && instance.el.parentNode) {
+                instance.el.parentNode.removeChild(instance.el);
+              }
+              instance._setEl(node);
+            }
+          },
+          onNodeAdded: function onNodeAdded(node) {
+            // mount our view instance if it is new
+            if (isElement(node) && node.hasAttribute('data-rio-view') && node.hasAttribute('data-rio-id')) {
+              var rioId = node.getAttribute('data-rio-id');
+              var instance = registry.idInstances[rioId];
+              instance.el = node;
+              if (!instance._mounted) {
+                instance.dispatch('mount');
+                instance._mounted = true;
+              }
             }
           }
+        });
+
+        while (this._updatedQueue.length) {
+          var view = this._updatedQueue.shift();
+          view.dispatch('updated');
         }
-      });
 
-      while (this._updatedQueue.length) {
-        var view = this._updatedQueue.shift();
-        view.dispatch('updated');
+        this.dispatch('updated');
+      } catch (e) {
+        throw new Error(e);
+      } finally {
+        registry.updateOpts = {};
       }
-
-      this.dispatch('updated');
     }
   }, {
     key: 'on',
