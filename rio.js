@@ -291,8 +291,10 @@ var View = function () {
   }, {
     key: '_renderView',
     value: function _renderView(view) {
-      if (view._mounted && !view.shouldUpdate(registry.updateOpts)) {
-        return '<div data-rio-should-render-false></div>';
+      if (view._mounted && view.shouldUpdate(registry.updateOpts) === false) {
+        var html = view.el.outerHTML;
+        html = html.replace(/(<[\w\-]+)/, '$1 data-rio-should-render-false');
+        return html;
       }
       view._parent(this);
       var viewName = view.namespace();
@@ -456,6 +458,12 @@ var View = function () {
     key: 'update',
     value: function update(opts) {
       // rerender the view and morph the dom to match
+      //
+      //
+      if (this._mounted && this.shouldUpdate(opts) === false) {
+        return;
+      }
+
       if (!this.el) return;
       this.dispatch('update');
       var newHTML = this.render().trim();
@@ -483,13 +491,8 @@ var View = function () {
             return isElement(node) && !node.hasAttribute('rio-sacrosanct');
           },
           onBeforeElUpdated: function onBeforeElUpdated(fromNode, toNode) {
-            if (isElement(fromNode) && fromNode.hasAttribute('data-rio-id')) {
-              var rioId = fromNode.getAttribute('data-rio-id');
-              var instance = registry.idInstances[rioId];
-              console.log('shouldrender?', toNode.hasAttribute('data-rio-should-render-false'));
-              console.log('shouldrender?', toNode);
-
-              if (toNode.hasAttribute('data-rio-should-render-false')) return false;
+            if (toNode.hasAttribute('data-rio-should-render-false')) {
+              return false;
             }
             if (isElement(fromNode) && document.activeElement == fromNode && fromNode.hasAttribute('rio-uninterruptable-input')) {
               // don't update the focused element if it is uninterruptable
@@ -516,6 +519,7 @@ var View = function () {
               instance.el = node;
               if (!instance._mounted) {
                 instance.dispatch('mount');
+                instance._mounted = true;
               }
             }
           }
