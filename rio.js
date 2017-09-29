@@ -458,8 +458,6 @@ var View = function () {
     key: 'update',
     value: function update(opts) {
       // rerender the view and morph the dom to match
-      //
-      //
       if (this._mounted && this.shouldUpdate(opts) === false) {
         return;
       }
@@ -532,7 +530,7 @@ var View = function () {
 
         this.dispatch('updated');
       } catch (e) {
-        throw new Error(e);
+        throw e;
       } finally {
         registry.updateOpts = {};
       }
