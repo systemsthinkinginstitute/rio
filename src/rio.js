@@ -7,6 +7,7 @@ const registry = {
   fns: {},
   fids: new WeakMap(),
   styles: [],
+  updateOpts: {},
 }
 
 const id = () => {
@@ -109,8 +110,8 @@ class View {
   }
 
   _renderView(view) {
-    if (view._mounted && !view.shouldUpdate()) {
-      return '';
+    if (view._mounted && !view.shouldUpdate(registry.updateOpts)) {
+      return '<div data-rio-should-render-false></div>';
     }
     view._parent(this);
     const viewName = view.namespace();
@@ -238,77 +239,86 @@ class View {
     return true;
   }
 
-  update() {
+  update(opts) {
     // rerender the view and morph the dom to match
     if (!this.el) return;
     this.dispatch('update');
     const newHTML = this.render().trim();
-
-    function isElement(node) {
-      return node.nodeType == Node.ELEMENT_NODE;
-    }
-
-    morphdom(this.el, newHTML, {
-      getNodeKey: node => {
-        return isElement(node) ? node.getAttribute('data-rio-id') || node.id : node.id;
-      },
-      onNodeDiscarded: node => {
-        // unmount our associated instance
-        if (isElement(node) && node.hasAttribute('data-rio-id')) {
-          const rioId = node.getAttribute('data-rio-id');
-          const instance = registry.idInstances[rioId];
-          instance.dispatch('unmount');
-          instance.unmount();
-        }
-      },
-      onBeforeNodeDiscarded: node => {
-        // don't remove elements with rio-sacrosanct attribute
-        return isElement(node) && !node.hasAttribute('rio-sacrosanct')
-      },
-      onBeforeElUpdated: node => {
-        if (isElement(node) && node.hasAttribute('data-rio-id')) {
-          const rioId = node.getAttribute('data-rio-id');
-          const instance = registry.idInstances[rioId];
-
-          if (!instance.shouldUpdate()) return false;
-        }
-        if (isElement(node) && document.activeElement == node && node.hasAttribute('rio-uninterruptable-input')) {
-          // don't update the focused element if it is uninterruptable
-          return false;
-        }
-      },
-      onBeforeNodeAdded: node => {
-        // transplant existing view instance to its new element if need be
-        if (isElement(node) && node.hasAttribute('data-rio-id')) {
-          const rioId = node.getAttribute('data-rio-id');
-          const instance = registry.idInstances[rioId];
-          // if the old element is in the dom, remove it and throw it away
-          if (instance && instance.el && instance.el.parentNode) {
-            instance.el.parentNode.removeChild(instance.el);
-          }
-          instance._setEl(node);
-        }
-      },
-      onNodeAdded: node => {
-        // mount our view instance if it is new
-        if (isElement(node) && node.hasAttribute('data-rio-view') && node.hasAttribute('data-rio-id')) {
-          const rioId = node.getAttribute('data-rio-id');
-          const instance = registry.idInstances[rioId];
-          instance.el = node;
-          if (!instance._mounted) {
-            instance.dispatch('mount');
-          }
-        }
+    registry.updateOpts = opts;
+    try {
+      function isElement(node) {
+        return node.nodeType == Node.ELEMENT_NODE;
       }
-    });
 
-    while (this._updatedQueue.length) {
-      const view = this._updatedQueue.shift();
-      view.dispatch('updated');
+      morphdom(this.el, newHTML, {
+        getNodeKey: node => {
+          return isElement(node) ? node.getAttribute('data-rio-id') || node.id : node.id;
+        },
+        onNodeDiscarded: node => {
+          // unmount our associated instance
+          if (isElement(node) && node.hasAttribute('data-rio-id')) {
+            const rioId = node.getAttribute('data-rio-id');
+            const instance = registry.idInstances[rioId];
+            instance.dispatch('unmount');
+            instance.unmount();
+          }
+        },
+        onBeforeNodeDiscarded: node => {
+          // don't remove elements with rio-sacrosanct attribute
+          return isElement(node) && !node.hasAttribute('rio-sacrosanct')
+        },
+        onBeforeElUpdated: ( fromNode, toNode ) => {
+          if (isElement(fromNode) && fromNode.hasAttribute('data-rio-id')) {
+            const rioId = fromNode.getAttribute('data-rio-id');
+            const instance = registry.idInstances[rioId];
+            console.log('shouldrender?', toNode.hasAttribute('data-rio-should-render-false'))
+            console.log('shouldrender?', toNode)
+
+            if (toNode.hasAttribute('data-rio-should-render-false')) return false;
+          }
+          if (isElement(fromNode) && document.activeElement == fromNode && fromNode.hasAttribute('rio-uninterruptable-input')) {
+            // don't update the focused element if it is uninterruptable
+            return false;
+          }
+        },
+        onBeforeNodeAdded: node => {
+          // transplant existing view instance to its new element if need be
+          if (isElement(node) && node.hasAttribute('data-rio-id')) {
+            const rioId = node.getAttribute('data-rio-id');
+            const instance = registry.idInstances[rioId];
+            // if the old element is in the dom, remove it and throw it away
+            if (instance && instance.el && instance.el.parentNode) {
+              instance.el.parentNode.removeChild(instance.el);
+            }
+            instance._setEl(node);
+          }
+        },
+        onNodeAdded: node => {
+          // mount our view instance if it is new
+          if (isElement(node) && node.hasAttribute('data-rio-view') && node.hasAttribute('data-rio-id')) {
+            const rioId = node.getAttribute('data-rio-id');
+            const instance = registry.idInstances[rioId];
+            instance.el = node;
+            if (!instance._mounted) {
+              instance.dispatch('mount');
+            }
+          }
+        }
+      });
+
+      while (this._updatedQueue.length) {
+        const view = this._updatedQueue.shift();
+        view.dispatch('updated');
+      }
+
+      this.dispatch('updated');
+    } catch (e) {
+      throw new Error(e);
+    } finally {
+      registry.updateOpts = {};
     }
-
-    this.dispatch('updated');
   }
+
 
   on(eventName, callback) {
     if (!this.handlers[eventName]) {
