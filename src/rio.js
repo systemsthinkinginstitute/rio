@@ -315,7 +315,7 @@ class View {
 
       this.dispatch('updated');
     } catch (e) {
-      throw new Error(e);
+      throw e;
     } finally {
       registry.updateOpts = {};
     }
