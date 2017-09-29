@@ -243,8 +243,6 @@ class View {
 
   update(opts) {
     // rerender the view and morph the dom to match
-    //
-    //
     if (this._mounted && this.shouldUpdate(opts) === false) {
       return;
     }
