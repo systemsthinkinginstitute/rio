@@ -57,6 +57,10 @@ class ItemView extends View {
     return item.id;
   }
 
+  shouldUpdate() {
+    return true;
+  }
+
   render() {
     return this.tmpl`
       <label class="item ${this.item.completed && 'completed'}">
