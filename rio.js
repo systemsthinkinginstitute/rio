@@ -292,14 +292,13 @@ var View = function () {
     key: '_renderView',
     value: function _renderView(view) {
       if (view._mounted && view.shouldUpdate(registry.updateOpts) === false) {
-        var html = view.el.outerHTML;
-        html = html.replace(/(<[\w\-]+)/, '$1 data-rio-should-render-false');
-        return html;
+        var tagName = view.el.tagName;
+        return '<' + tagName + ' data-rio-id="' + view._id + '" data-rio-should-render-false></' + tagName + '>';
       }
       view._parent(this);
       var viewName = view.namespace();
-      this.views[viewName] = this.views[viewName] || [];
-      this.views[viewName].push(view);
+      this._views[viewName] = this._views[viewName] || [];
+      this._views[viewName].push(view);
       view._depth = this._depth + 1;
       if (view._mounted) view.dispatch('update');
       var output = view.render();
@@ -315,6 +314,8 @@ var View = function () {
       var _this = this;
 
       // tag function for interpolating templates
+
+      this._views = {};
 
       if (!registry.styles.find(function (s) {
         return s[0] == _this.namespace();
@@ -369,6 +370,7 @@ var View = function () {
             output += val;
           }
         }
+        this.views = this._views;
       }
 
       this._register(this._id, this);
@@ -458,8 +460,6 @@ var View = function () {
     key: 'update',
     value: function update(opts) {
       // rerender the view and morph the dom to match
-      //
-      //
       if (this._mounted && this.shouldUpdate(opts) === false) {
         return;
       }
@@ -532,7 +532,7 @@ var View = function () {
 
         this.dispatch('updated');
       } catch (e) {
-        throw new Error(e);
+        throw e;
       } finally {
         registry.updateOpts = {};
       }
