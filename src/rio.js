@@ -111,14 +111,13 @@ class View {
 
   _renderView(view) {
     if (view._mounted && view.shouldUpdate(registry.updateOpts) === false) {
-      let html = view.el.outerHTML;
-      html = html.replace(/(<[\w\-]+)/, '$1 data-rio-should-render-false');
-      return html;
+      const tagName = view.el.tagName;
+      return `<${tagName} data-rio-id="${view._id}" data-rio-should-render-false></${tagName}>`;
     }
     view._parent(this);
     const viewName = view.namespace();
-    this.views[viewName] = this.views[viewName] || [];
-    this.views[viewName].push(view);
+    this._views[viewName] = this._views[viewName] || [];
+    this._views[viewName].push(view);
     view._depth = this._depth + 1;
     if (view._mounted)
       view.dispatch('update');
@@ -133,6 +132,8 @@ class View {
   tmpl(strings, ...expressions) {
 
     // tag function for interpolating templates
+
+    this._views = {};
 
     if (!registry.styles.find(s => s[0] == this.namespace())) {
       registry.styles.push([this.namespace(), this.style()]);
@@ -185,6 +186,7 @@ class View {
           output += val;
         }
       }
+      this.views = this._views;
     }
 
     this._register(this._id, this);
