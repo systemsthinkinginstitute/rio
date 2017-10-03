@@ -111,13 +111,14 @@ class View {
 
   _renderView(view) {
     if (view._mounted && view.shouldUpdate(registry.updateOpts) === false) {
-      const tagName = view.el.tagName;
-      return `<${tagName} data-rio-id="${view._id}" data-rio-should-render-false></${tagName}>`;
+      let html = view.el.outerHTML;
+      html = html.replace(/(<[\w\-]+)/, '$1 data-rio-should-render-false');
+      return html;
     }
     view._parent(this);
     const viewName = view.namespace();
-    this._views[viewName] = this._views[viewName] || [];
-    this._views[viewName].push(view);
+    this.views[viewName] = this.views[viewName] || [];
+    this.views[viewName].push(view);
     view._depth = this._depth + 1;
     if (view._mounted)
       view.dispatch('update');
@@ -132,8 +133,6 @@ class View {
   tmpl(strings, ...expressions) {
 
     // tag function for interpolating templates
-
-    this._views = {};
 
     if (!registry.styles.find(s => s[0] == this.namespace())) {
       registry.styles.push([this.namespace(), this.style()]);
@@ -186,7 +185,6 @@ class View {
           output += val;
         }
       }
-      this.views = this._views;
     }
 
     this._register(this._id, this);
@@ -345,13 +343,24 @@ class View {
 
 function Refs(view) {
 
+  const traverse = function(el, name, descendant) {
+    if (el.getAttribute('ref') == name) return el;
+    for (const c of el.children) {
+      // don't descend into other views' elements
+      if (descendant && c.hasAttribute('data-rio-view')) continue;
+      const match = traverse(c, name, true);
+      if (match) return match;
+    }
+    return null;
+  }
+
   const handler = {
     get: function(target, name) {
       if (target[name]) {
         return target[name];
       }
       if (view.el) {
-        const el = view.el.querySelector(`[ref=${name}]`);
+        const el = traverse(view.el, name);
         target[name] = el;
         return el;
       } else {
