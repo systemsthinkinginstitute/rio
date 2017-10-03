@@ -292,13 +292,14 @@ var View = function () {
     key: '_renderView',
     value: function _renderView(view) {
       if (view._mounted && view.shouldUpdate(registry.updateOpts) === false) {
-        var tagName = view.el.tagName;
-        return '<' + tagName + ' data-rio-id="' + view._id + '" data-rio-should-render-false></' + tagName + '>';
+        var html = view.el.outerHTML;
+        html = html.replace(/(<[\w\-]+)/, '$1 data-rio-should-render-false');
+        return html;
       }
       view._parent(this);
       var viewName = view.namespace();
-      this._views[viewName] = this._views[viewName] || [];
-      this._views[viewName].push(view);
+      this.views[viewName] = this.views[viewName] || [];
+      this.views[viewName].push(view);
       view._depth = this._depth + 1;
       if (view._mounted) view.dispatch('update');
       var output = view.render();
@@ -314,8 +315,6 @@ var View = function () {
       var _this = this;
 
       // tag function for interpolating templates
-
-      this._views = {};
 
       if (!registry.styles.find(function (s) {
         return s[0] == _this.namespace();
@@ -370,7 +369,6 @@ var View = function () {
             output += val;
           }
         }
-        this.views = this._views;
       }
 
       this._register(this._id, this);
@@ -585,13 +583,46 @@ var View = function () {
 
 function Refs(view) {
 
+  var traverse = function traverse(el, name, descendant) {
+    if (el.getAttribute('ref') == name) return el;
+    var _iteratorNormalCompletion6 = true;
+    var _didIteratorError6 = false;
+    var _iteratorError6 = undefined;
+
+    try {
+      for (var _iterator6 = el.children[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+        var c = _step6.value;
+
+        // don't descend into other views' elements
+        if (descendant && c.hasAttribute('data-rio-view')) continue;
+        var match = traverse(c, name, true);
+        if (match) return match;
+      }
+    } catch (err) {
+      _didIteratorError6 = true;
+      _iteratorError6 = err;
+    } finally {
+      try {
+        if (!_iteratorNormalCompletion6 && _iterator6.return) {
+          _iterator6.return();
+        }
+      } finally {
+        if (_didIteratorError6) {
+          throw _iteratorError6;
+        }
+      }
+    }
+
+    return null;
+  };
+
   var handler = {
     get: function get(target, name) {
       if (target[name]) {
         return target[name];
       }
       if (view.el) {
-        var el = view.el.querySelector('[ref=' + name + ']');
+        var el = traverse(view.el, name);
         target[name] = el;
         return el;
       } else {
