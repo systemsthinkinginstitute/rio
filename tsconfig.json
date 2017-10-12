@@ -1,0 +1,16 @@
+{
+ "compilerOptions": {
+   "target": "es6",
+   "noImplicitAny": true,
+   "module": "es6",
+   "allowJs": true,
+   "checkJs": false,
+   "outDir": "output"
+ },
+ "include": [
+   "src/rio.ts"
+ ],
+ "exclude": [
+   "src/css.js"
+ ]
+}

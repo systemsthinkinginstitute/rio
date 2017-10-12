@@ -1,20 +1,49 @@
 import morphdom from 'morphdom';
-import css from './css';
+import css from './css.js';
+
+type Function = (...args: any[]) => any;
 
 
-const registry = {
+interface Registry {
+  idInstances: { [key: string]: View };
+  fns: { [key: string]: Function };
+  fids: WeakMap<object, any>;
+  styles: [string, string][];
+  updateOpts: object;
+}
+
+interface ViewInterface {
+  initialize: () => void;
+  finalize: () => void;
+  style: () => string;
+  render: () => string;
+  key: () => string;
+}
+
+const registry: Registry = {
   idInstances: {},
   fns: {},
   fids: new WeakMap(),
   styles: [],
   updateOpts: {},
-}
+};
 
 const id = () => {
   return String(Math.random());
-}
+};
 
-class View {
+abstract class View implements ViewInterface {
+  handlers: { mount: any[], update: any[], updated: any[], unmount: any[] };
+  refs: object;
+  _id: string;
+  _fids: string[];
+  parent?: View;
+  _updatedQueue: View[];
+  _mounted: boolean;
+  _depth: number;
+  views: { [key: string]: View[] };
+  html: string;
+  el: Element;
 
   constructor() {
     const key = this.key(...arguments);
@@ -28,7 +57,6 @@ class View {
     this.refs = Refs(this);
     this._id = key;
     this._fids = [];
-    this.parent = null;
     this._updatedQueue = [];
     this._mounted = false;
     this._depth = 0;
@@ -37,34 +65,24 @@ class View {
   }
 
   /* methods to override */
-
+  
+  abstract initialize(): void;
+  
+  abstract finalize(): void;
+  
+  abstract style(): string;
+  
+  abstract render(): string;
+  
+  abstract key(): string;
+  
   namespace() {
     // used for scoping css
     return this.constructor.name;
-  }
-
-  initialize() {
-    // implement in subclass
-  }
-
-  finalize() {
-    // implement in subclass
-  }
-
-  render() {
-    // implement in subclass
-  }
-
-  style() {
-    // implement in subclass
-  }
-
-  key() {
-    throw new Error("Please define a 'key' method that returns a deterministic key for a given instance.");
-  }
+  }  
 
   /* helper methods */
-
+  
   _register() {
     registry.idInstances[this._id] = this;
   }
@@ -83,7 +101,7 @@ class View {
   _harvestViews() {
     // deal with views and elements we've just mounted
     const els = Array.from(this.el.querySelectorAll('[data-rio-id]'));
-    let descendants = [];
+    let descendants: View[] = [];
     for (const el of els) {
       const instance = registry.idInstances[el.getAttribute('data-rio-id')];
       instance.el = el;
@@ -99,17 +117,17 @@ class View {
     }
   }
 
-  _setEl(el) {
+  _setEl(el: Element) {
     this.el = el;
     this.refs = Refs(this);
   }
 
-  _parent(p) {
+  _parent(p: View) {
     // allow tmpl to set the parent
     this.parent = p;
   }
 
-  _renderView(view) {
+  _renderView(view: View) {
     if (view._mounted && view.shouldUpdate(registry.updateOpts) === false) {
       let html = view.el.outerHTML;
       html = html.replace(/(<[\w\-]+)/, '$1 data-rio-should-render-false');
@@ -117,7 +135,7 @@ class View {
     }
     view._parent(this);
     const viewName = view.namespace();
-    this.views[viewName] = this.views[viewName] || [];
+    this.views[viewName] = this.views[viewName] || [] as View[];
     this.views[viewName].push(view);
     view._depth = this._depth + 1;
     if (view._mounted)
@@ -129,22 +147,22 @@ class View {
   }
 
   /* public interface */
-
-  tmpl(strings, ...expressions) {
-
+  
+  tmpl(strings: string[], ...expressions: (View | View[] | Function | string)[] ) {
+    const self = this; 
+    
     // tag function for interpolating templates
 
     if (!registry.styles.find(s => s[0] == this.namespace())) {
       registry.styles.push([this.namespace(), this.style()]);
     }
 
-    const registerFn = (fn) => {
-
+    const registerFn = (fn: Function) => {
       let fid;
       if (registry.fids.get(this).has(fn)) {
         fid = registry.fids.get(this).get(fn);
       } else {
-        fid = 'ev' + String(parseInt(Math.random() * Number.MAX_SAFE_INTEGER - 1));
+        fid = 'ev' + String(Math.round(Math.random() * Number.MAX_SAFE_INTEGER - 1));
         const boundFn = () => {
           fn.bind(this)(window.event);
           return window.event.defaultPrevented;
@@ -172,13 +190,13 @@ class View {
           const fid = registerFn(val);
           output += `"rio.fns.${fid}()"`;
         } else if (Array.isArray(val)) {
-          // we need to flatten the array to a string
-          for (let i = 0; i < val.length; i++) {
-            if (val[i] instanceof View) {
-              val[i] = this._renderView(val[i]);
+          output += val.reduce((rendered: string, view: any) => {
+            if (view instanceof View) {
+              return rendered + self._renderView(view);
+            } else {
+              return rendered;
             }
-          }
-          output += val.join('');
+          }, '');
         } else if (val === null || val === undefined) {
           output += '';
         } else {
@@ -187,7 +205,7 @@ class View {
       }
     }
 
-    this._register(this._id, this);
+    this._register();
 
     // tack our id and view name onto the root element of the view
     output = output.replace(/(<[\w\-]+)/, '$1 data-rio-id="' + this._id + '" data-rio-view="' + this.namespace() + '"');
@@ -195,7 +213,7 @@ class View {
     return output;
   }
 
-  css(strings, ...expressions) {
+  css(strings: string[], ...expressions: any[]) {
     // tag function for interpolating css
     let output = '';
     for (let i = 0; i < strings.length; i++) {
@@ -209,7 +227,7 @@ class View {
     return output;
   }
 
-  mount(el) {
+  mount(el: Element) {
     try {
       window.rio = rio;
     } catch(e) {}
@@ -237,11 +255,11 @@ class View {
     }
   }
 
-  shouldUpdate() {
+  shouldUpdate(opts: object) {
     return true;
   }
 
-  update(opts) {
+  update(opts: object) {
     // rerender the view and morph the dom to match
     if (this._mounted && this.shouldUpdate(opts) === false) {
       return;
@@ -252,15 +270,15 @@ class View {
     const newHTML = this.render().trim();
     registry.updateOpts = opts;
     try {
-      function isElement(node) {
+      function isElement(node: Node) {
         return node.nodeType == Node.ELEMENT_NODE;
       }
 
       morphdom(this.el, newHTML, {
-        getNodeKey: node => {
+        getNodeKey: (node: Node) => {
           return isElement(node) ? node.getAttribute('data-rio-id') || node.id : node.id;
         },
-        onNodeDiscarded: node => {
+        onNodeDiscarded: (node: Node) => {
           // unmount our associated instance
           if (isElement(node) && node.hasAttribute('data-rio-id')) {
             const rioId = node.getAttribute('data-rio-id');
@@ -269,7 +287,7 @@ class View {
             instance.unmount();
           }
         },
-        onBeforeNodeDiscarded: node => {
+        onBeforeNodeDiscarded: (node: Node) => {
           // don't remove elements with rio-sacrosanct attribute
           return isElement(node) && !node.hasAttribute('rio-sacrosanct');
         },
@@ -282,7 +300,7 @@ class View {
             return false;
           }
         },
-        onBeforeNodeAdded: node => {
+        onBeforeNodeAdded: (node: Node) => {
           // transplant existing view instance to its new element if need be
           if (isElement(node) && node.hasAttribute('data-rio-id')) {
             const rioId = node.getAttribute('data-rio-id');
@@ -291,7 +309,7 @@ class View {
             if (instance && instance.el && instance.el.parentNode) {
               instance.el.parentNode.removeChild(instance.el);
             }
-            instance._setEl(node);
+            instance._setEl(node as Element);
           }
         },
         onNodeAdded: node => {
@@ -322,14 +340,15 @@ class View {
   }
 
 
-  on(eventName, callback) {
+  on(eventName: string, callback: Function) {
     if (!this.handlers[eventName]) {
       throw new Error("no event " + eventName);
+    } else {
+      this.handlers[eventName].push(callback);
     }
-    this.handlers[eventName].push(callback);
   }
 
-  dispatch(eventName) {
+  dispatch(eventName: string) {
     for (const handler of this.handlers[eventName]) {
       handler.call(this);
     }
@@ -341,7 +360,7 @@ class View {
 
 }
 
-function Refs(view) {
+function Refs(view: View): object {
 
   const traverse = function(el, name, descendant) {
     if (el.getAttribute('ref') == name) return el;
@@ -360,7 +379,7 @@ function Refs(view) {
         return target[name];
       }
       if (view.el) {
-        const el = traverse(view.el, name);
+        const el = traverse(view.el, name, false);
         target[name] = el;
         return el;
       } else {
