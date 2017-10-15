@@ -92,7 +92,9 @@ abstract class View implements ViewInterface {
     }
     const styleEl = document.createElement('style');
     styleEl.innerHTML = css;
-    this.el.parentNode.insertBefore(styleEl, this.el);
+    if (this.el.parentNode) {
+      this.el.parentNode.insertBefore(styleEl, this.el);
+    }
   }
 
   _harvestViews() {
@@ -100,9 +102,12 @@ abstract class View implements ViewInterface {
     const els = Array.from(this.el.querySelectorAll('[data-rio-id]'));
     let descendants: View[] = [];
     for (const el of els) {
-      const instance = registry.idInstances[el.getAttribute('data-rio-id')];
-      instance.el = el;
-      descendants.push(instance);
+      if (el.hasAttribute('data-rio-id')) {
+        // we know this cast is safe because of the guard
+        const instance = registry.idInstances[el.getAttribute('data-rio-id') as string];
+        instance.el = el;
+        descendants.push(instance);
+      }
     }
 
     descendants = descendants
@@ -162,7 +167,11 @@ abstract class View implements ViewInterface {
         fid = 'ev' + String(Math.round(Math.random() * Number.MAX_SAFE_INTEGER - 1));
         const boundFn = () => {
           fn.bind(this)(window.event);
-          return window.event.defaultPrevented;
+          if (window.event) {
+            return window.event.defaultPrevented;
+          } else {
+            return false;
+          }
         }
         registry.fids.get(this).set(fn, fid);
         registry.fns[fid] = boundFn;
@@ -226,6 +235,7 @@ abstract class View implements ViewInterface {
 
   mount(el: Element) {
     try {
+      // hacky
       (window as any).rio = rio;
     } catch(e) {}
     this.el = el;
@@ -273,12 +283,13 @@ abstract class View implements ViewInterface {
 
       morphdom(this.el, newHTML, {
         getNodeKey: (node: Node) => {
+          // the "as any" are bad hacks that worry me
           return isElement(node) ? (node as Element).getAttribute('data-rio-id') || (node as any).id : (node as any).id;
         },
         onNodeDiscarded: (node: Node) => {
           // unmount our associated instance
           if (isElement(node) && (node as Element).hasAttribute('data-rio-id')) {
-            const rioId = (node as Element).getAttribute('data-rio-id');
+            const rioId = (node as Element).getAttribute('data-rio-id') as string;
             const instance = registry.idInstances[rioId];
             instance.dispatch('unmount');
             instance.unmount();
@@ -296,11 +307,12 @@ abstract class View implements ViewInterface {
             // don't update the focused element if it is uninterruptable
             return false;
           }
+          return true;
         },
         onBeforeNodeAdded: (node: Node) => {
           // transplant existing view instance to its new element if need be
           if (isElement(node) && (node as Element).hasAttribute('data-rio-id')) {
-            const rioId = (node as Element).getAttribute('data-rio-id');
+            const rioId = (node as Element).getAttribute('data-rio-id') as string;
             const instance = registry.idInstances[rioId];
             // if the old element is in the dom, remove it and throw it away
             if (instance && instance.el && instance.el.parentNode) {
@@ -313,7 +325,7 @@ abstract class View implements ViewInterface {
         onNodeAdded: (node: Node) => {
           // mount our view instance if it is new
           if (isElement(node) && (node as Element).hasAttribute('data-rio-view') && (node as Element).hasAttribute('data-rio-id')) {
-            const rioId = (node as Element).getAttribute('data-rio-id');
+            const rioId = (node as Element).getAttribute('data-rio-id') as string;
             const instance = registry.idInstances[rioId];
             instance.el = (node as Element);
             if (!instance._mounted) {
@@ -326,7 +338,7 @@ abstract class View implements ViewInterface {
       });
 
       while (this._updatedQueue.length) {
-        const view = this._updatedQueue.shift();
+        const view = this._updatedQueue.shift() as View;
         view.dispatch('updated');
       }
 
@@ -363,6 +375,7 @@ function Refs(view: View): object {
 
   const traverse = (el: Element, name: string, descendant: boolean): Element | null => {
     if (el.getAttribute('ref') == name) return el;
+    // hacky
     for (const c of (el.children as any)) {
       // don't descend into other views' elements
       if (descendant && c.hasAttribute('data-rio-view')) continue;
@@ -379,7 +392,7 @@ function Refs(view: View): object {
       }
       if (view.el) {
         const el = traverse(view.el, name, false);
-        target[name] = el;
+        if (el) target[name] = el;
         return el;
       } else {
         return null;

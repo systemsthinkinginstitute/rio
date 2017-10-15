@@ -129,16 +129,20 @@ class View {
         }
         const styleEl = document.createElement('style');
         styleEl.innerHTML = css;
-        this.el.parentNode.insertBefore(styleEl, this.el);
+        if (this.el.parentNode) {
+            this.el.parentNode.insertBefore(styleEl, this.el);
+        }
     }
     _harvestViews() {
         // deal with views and elements we've just mounted
         const els = Array.from(this.el.querySelectorAll('[data-rio-id]'));
         let descendants = [];
         for (const el of els) {
-            const instance = registry.idInstances[el.getAttribute('data-rio-id')];
-            instance.el = el;
-            descendants.push(instance);
+            if (el.hasAttribute('data-rio-id')) {
+                const instance = registry.idInstances[el.getAttribute('data-rio-id')];
+                instance.el = el;
+                descendants.push(instance);
+            }
         }
         descendants = descendants
             .sort((a, b) => b._depth - a._depth);
@@ -189,7 +193,12 @@ class View {
                 fid = 'ev' + String(Math.round(Math.random() * Number.MAX_SAFE_INTEGER - 1));
                 const boundFn = () => {
                     fn.bind(this)(window.event);
-                    return window.event.defaultPrevented;
+                    if (window.event) {
+                        return window.event.defaultPrevented;
+                    }
+                    else {
+                        return false;
+                    }
                 };
                 registry.fids.get(this).set(fn, fid);
                 registry.fns[fid] = boundFn;
@@ -317,6 +326,7 @@ class View {
                         // don't update the focused element if it is uninterruptable
                         return false;
                     }
+                    return true;
                 },
                 onBeforeNodeAdded: (node) => {
                     // transplant existing view instance to its new element if need be
@@ -396,7 +406,8 @@ function Refs(view) {
             }
             if (view.el) {
                 const el = traverse(view.el, name, false);
-                target[name] = el;
+                if (el)
+                    target[name] = el;
                 return el;
             }
             else {
