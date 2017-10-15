@@ -1,8 +1,9 @@
-import morphdom from 'morphdom';
+import * as morphdom from "morphdom";
 import css from './css.js';
 
 type Function = (...args: any[]) => any;
 
+type SideEffects = (x: View) => void;
 
 interface Registry {
   idInstances: { [key: string]: View };
@@ -28,12 +29,8 @@ const registry: Registry = {
   updateOpts: {},
 };
 
-const id = () => {
-  return String(Math.random());
-};
-
 abstract class View implements ViewInterface {
-  handlers: { mount: any[], update: any[], updated: any[], unmount: any[] };
+  handlers: { [name: string]: SideEffects[] };
   refs: object;
   _id: string;
   _fids: string[];
@@ -90,7 +87,7 @@ abstract class View implements ViewInterface {
   _injectStyle() {
     // construct compiled stylesheet and inject
     let css = '';
-    for (let [name, content] of registry.styles) {
+    for (let [_, content] of registry.styles) {
       css += content;
     }
     const styleEl = document.createElement('style');
@@ -229,7 +226,7 @@ abstract class View implements ViewInterface {
 
   mount(el: Element) {
     try {
-      window.rio = rio;
+      (window as any).rio = rio;
     } catch(e) {}
     this.el = el;
     this.html = this.render();
@@ -255,7 +252,7 @@ abstract class View implements ViewInterface {
     }
   }
 
-  shouldUpdate(opts: object) {
+  shouldUpdate(_: object) {
     return true;
   }
 
@@ -276,12 +273,12 @@ abstract class View implements ViewInterface {
 
       morphdom(this.el, newHTML, {
         getNodeKey: (node: Node) => {
-          return isElement(node) ? node.getAttribute('data-rio-id') || node.id : node.id;
+          return isElement(node) ? (node as Element).getAttribute('data-rio-id') || (node as any).id : (node as any).id;
         },
         onNodeDiscarded: (node: Node) => {
           // unmount our associated instance
-          if (isElement(node) && node.hasAttribute('data-rio-id')) {
-            const rioId = node.getAttribute('data-rio-id');
+          if (isElement(node) && (node as Element).hasAttribute('data-rio-id')) {
+            const rioId = (node as Element).getAttribute('data-rio-id');
             const instance = registry.idInstances[rioId];
             instance.dispatch('unmount');
             instance.unmount();
@@ -289,21 +286,21 @@ abstract class View implements ViewInterface {
         },
         onBeforeNodeDiscarded: (node: Node) => {
           // don't remove elements with rio-sacrosanct attribute
-          return isElement(node) && !node.hasAttribute('rio-sacrosanct');
+          return isElement(node) && !(node as Element).hasAttribute('rio-sacrosanct');
         },
-        onBeforeElUpdated: ( fromNode, toNode ) => {
+        onBeforeElUpdated: ( fromNode: Element, toNode: Element ) => {
           if (toNode.hasAttribute('data-rio-should-render-false')) {
             return false;
           }
-          if (isElement(fromNode) && document.activeElement == fromNode && fromNode.hasAttribute('rio-uninterruptable-input')) {
+          if (isElement(fromNode) && document.activeElement == fromNode && (fromNode as Element).hasAttribute('rio-uninterruptable-input')) {
             // don't update the focused element if it is uninterruptable
             return false;
           }
         },
         onBeforeNodeAdded: (node: Node) => {
           // transplant existing view instance to its new element if need be
-          if (isElement(node) && node.hasAttribute('data-rio-id')) {
-            const rioId = node.getAttribute('data-rio-id');
+          if (isElement(node) && (node as Element).hasAttribute('data-rio-id')) {
+            const rioId = (node as Element).getAttribute('data-rio-id');
             const instance = registry.idInstances[rioId];
             // if the old element is in the dom, remove it and throw it away
             if (instance && instance.el && instance.el.parentNode) {
@@ -311,18 +308,20 @@ abstract class View implements ViewInterface {
             }
             instance._setEl(node as Element);
           }
+          return node;
         },
-        onNodeAdded: node => {
+        onNodeAdded: (node: Node) => {
           // mount our view instance if it is new
-          if (isElement(node) && node.hasAttribute('data-rio-view') && node.hasAttribute('data-rio-id')) {
-            const rioId = node.getAttribute('data-rio-id');
+          if (isElement(node) && (node as Element).hasAttribute('data-rio-view') && (node as Element).hasAttribute('data-rio-id')) {
+            const rioId = (node as Element).getAttribute('data-rio-id');
             const instance = registry.idInstances[rioId];
-            instance.el = node;
+            instance.el = (node as Element);
             if (!instance._mounted) {
               instance.dispatch('mount');
               instance._mounted = true;
             }
           }
+          return node;
         }
       });
 
@@ -340,7 +339,7 @@ abstract class View implements ViewInterface {
   }
 
 
-  on(eventName: string, callback: Function) {
+  on(eventName: string, callback: SideEffects) {
     if (!this.handlers[eventName]) {
       throw new Error("no event " + eventName);
     } else {
@@ -362,9 +361,9 @@ abstract class View implements ViewInterface {
 
 function Refs(view: View): object {
 
-  const traverse = function(el, name, descendant) {
+  const traverse = (el: Element, name: string, descendant: boolean): Element | null => {
     if (el.getAttribute('ref') == name) return el;
-    for (const c of el.children) {
+    for (const c of (el.children as any)) {
       // don't descend into other views' elements
       if (descendant && c.hasAttribute('data-rio-view')) continue;
       const match = traverse(c, name, true);
@@ -374,7 +373,7 @@ function Refs(view: View): object {
   }
 
   const handler = {
-    get: function(target, name) {
+    get: (target: { [key: string]: Element }, name: string): Element | null => {
       if (target[name]) {
         return target[name];
       }

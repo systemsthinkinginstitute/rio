@@ -3,8 +3,8 @@ const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
 
 module.exports = {
   entry: {
-    'rio.js': './src/rio.js',
-    'rio.min.js': './src/rio.js',
+    'rio.js': './src/rio.ts',
+    'rio.min.js': './src/rio.ts',
   },
   output: {
     filename: '[name]',
@@ -25,6 +25,11 @@ module.exports = {
         options: {
           presets: ['es2015']
         },
+      },
+      {
+        test: /\.ts$/,
+        exclude: /node_modules/,
+        loader: 'ts-loader'
       }
     ]
   }
