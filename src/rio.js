@@ -1,21 +1,19 @@
-import morphdom from 'morphdom';
-import css from './css';
-
+import morphdom from "morphdom";
+import css from "./css";
 
 const registry = {
   idInstances: {},
   fns: {},
   fids: new WeakMap(),
   styles: [],
-  updateOpts: {},
-}
+  updateOpts: {}
+};
 
 const id = () => {
   return String(Math.random());
-}
+};
 
 class View {
-
   constructor() {
     const key = this.key(...arguments);
     if (registry.idInstances[key]) {
@@ -60,7 +58,9 @@ class View {
   }
 
   key() {
-    throw new Error("Please define a 'key' method that returns a deterministic key for a given instance.");
+    throw new Error(
+      "Please define a 'key' method that returns a deterministic key for a given instance."
+    );
   }
 
   /* helper methods */
@@ -71,30 +71,29 @@ class View {
 
   _injectStyle() {
     // construct compiled stylesheet and inject
-    let css = '';
+    let css = "";
     for (let [name, content] of registry.styles) {
       css += content;
     }
-    const styleEl = document.createElement('style');
+    const styleEl = document.createElement("style");
     styleEl.innerHTML = css;
     this.el.parentNode.insertBefore(styleEl, this.el);
   }
 
   _harvestViews() {
     // deal with views and elements we've just mounted
-    const els = Array.from(this.el.querySelectorAll('[data-rio-id]'));
+    const els = Array.from(this.el.querySelectorAll("[data-rio-id]"));
     let descendants = [];
     for (const el of els) {
-      const instance = registry.idInstances[el.getAttribute('data-rio-id')];
+      const instance = registry.idInstances[el.getAttribute("data-rio-id")];
       instance.el = el;
       descendants.push(instance);
     }
 
-    descendants = descendants
-      .sort((a, b) => b._depth - a._depth);
+    descendants = descendants.sort((a, b) => b._depth - a._depth);
 
     for (const instance of descendants) {
-      instance.dispatch('mount');
+      instance.dispatch("mount");
       instance._mounted = true;
     }
   }
@@ -112,7 +111,7 @@ class View {
   _renderView(view) {
     if (view._mounted && view.shouldUpdate(registry.updateOpts) === false) {
       let html = view.el.outerHTML;
-      html = html.replace(/(<[\w\-]+)/, '$1 data-rio-should-render-false');
+      html = html.replace(/(<[\w\-]+)/, "$1 data-rio-should-render-false");
       return html;
     }
     view._parent(this);
@@ -120,54 +119,50 @@ class View {
     this.views[viewName] = this.views[viewName] || [];
     this.views[viewName].push(view);
     view._depth = this._depth + 1;
-    if (view._mounted)
-      view.dispatch('update');
+    if (view._mounted) view.dispatch("update");
     const output = view.render();
-    if (view._mounted)
-      this._updatedQueue.push(view);
+    if (view._mounted) this._updatedQueue.push(view);
     return output;
   }
 
   /* public interface */
 
   tmpl(strings, ...expressions) {
-
     // tag function for interpolating templates
 
     if (!registry.styles.find(s => s[0] == this.namespace())) {
       registry.styles.push([this.namespace(), this.style()]);
     }
 
-    const registerFn = (fn) => {
-
+    const registerFn = fn => {
       let fid;
       if (registry.fids.get(this).has(fn)) {
         fid = registry.fids.get(this).get(fn);
       } else {
-        fid = 'ev' + String(parseInt(Math.random() * Number.MAX_SAFE_INTEGER - 1));
+        fid =
+          "ev" + String(parseInt(Math.random() * Number.MAX_SAFE_INTEGER - 1));
         const boundFn = () => {
           fn.bind(this)(window.event);
           return window.event.defaultPrevented;
-        }
+        };
         registry.fids.get(this).set(fn, fid);
         registry.fns[fid] = boundFn;
         this._fids.push(fid);
       }
       return fid;
-    }
+    };
 
-    let output = '';
+    let output = "";
     this._updatedQueue.length = 0;
 
     for (let i = 0; i < strings.length; i++) {
-
       output += strings[i];
       if (i < expressions.length) {
         const val = expressions[i];
         if (val instanceof View) {
           // assume we want to render if it is a view instance
           output += this._renderView(val);
-        } else if (typeof val == 'function') {
+        } else if (typeof val == "function") {
           // assume a function is an event handler and stash a reference
           const fid = registerFn(val);
           output += `"rio.fns.${fid}()"`;
@@ -178,9 +173,9 @@ class View {
               val[i] = this._renderView(val[i]);
             }
           }
-          output += val.join('');
+          output += val.join("");
         } else if (val === null || val === undefined) {
-          output += '';
+          output += "";
         } else {
           output += val;
         }
@@ -190,14 +185,21 @@ class View {
     this._register(this._id, this);
 
     // tack our id and view name onto the root element of the view
-    output = output.replace(/(<[\w\-]+)/, '$1 data-rio-id="' + this._id + '" data-rio-view="' + this.namespace() + '"');
+    output = output.replace(
+      /(<[\w\-]+)/,
+      '$1 data-rio-id="' +
+        this._id +
+        '" data-rio-view="' +
+        this.namespace() +
+        '"'
+    );
 
     return output;
   }
 
   css(strings, ...expressions) {
     // tag function for interpolating css
-    let output = '';
+    let output = "";
     for (let i = 0; i < strings.length; i++) {
       output += strings[i];
       if (i < expressions.length) {
@@ -212,7 +214,7 @@ class View {
   mount(el) {
     try {
       window.rio = rio;
-    } catch(e) {}
+    } catch (e) {}
     this.el = el;
     this.html = this.render();
     this._injectStyle();
@@ -248,7 +250,7 @@ class View {
     }
 
     if (!this.el) return;
-    this.dispatch('update');
+    this.dispatch("update");
     const newHTML = this.render().trim();
     registry.updateOpts = opts;
     try {
@@ -258,34 +260,40 @@ class View {
 
       morphdom(this.el, newHTML, {
         getNodeKey: node => {
-          return isElement(node) ? node.getAttribute('data-rio-id') || node.id : node.id;
+          return isElement(node)
+            ? node.getAttribute("data-rio-id") || node.id
+            : node.id;
         },
         onNodeDiscarded: node => {
           // unmount our associated instance
-          if (isElement(node) && node.hasAttribute('data-rio-id')) {
-            const rioId = node.getAttribute('data-rio-id');
+          if (isElement(node) && node.hasAttribute("data-rio-id")) {
+            const rioId = node.getAttribute("data-rio-id");
             const instance = registry.idInstances[rioId];
-            instance.dispatch('unmount');
+            instance.dispatch("unmount");
             instance.unmount();
           }
         },
         onBeforeNodeDiscarded: node => {
           // don't remove elements with rio-sacrosanct attribute
-          return isElement(node) && !node.hasAttribute('rio-sacrosanct');
+          return isElement(node) && !node.hasAttribute("rio-sacrosanct");
         },
-        onBeforeElUpdated: ( fromNode, toNode ) => {
-          if (toNode.hasAttribute('data-rio-should-render-false')) {
+        onBeforeElUpdated: (fromNode, toNode) => {
+          if (toNode.hasAttribute("data-rio-should-render-false")) {
             return false;
           }
-          if (isElement(fromNode) && document.activeElement == fromNode && fromNode.hasAttribute('rio-uninterruptable-input')) {
+          if (
+            isElement(fromNode) &&
+            document.activeElement == fromNode &&
+            fromNode.hasAttribute("rio-uninterruptable-input")
+          ) {
             // don't update the focused element if it is uninterruptable
             return false;
           }
         },
         onBeforeNodeAdded: node => {
           // transplant existing view instance to its new element if need be
-          if (isElement(node) && node.hasAttribute('data-rio-id')) {
-            const rioId = node.getAttribute('data-rio-id');
+          if (isElement(node) && node.hasAttribute("data-rio-id")) {
+            const rioId = node.getAttribute("data-rio-id");
             const instance = registry.idInstances[rioId];
             // if the old element is in the dom, remove it and throw it away
             if (instance && instance.el && instance.el.parentNode) {
@@ -296,12 +304,16 @@ class View {
         },
         onNodeAdded: node => {
           // mount our view instance if it is new
-          if (isElement(node) && node.hasAttribute('data-rio-view') && node.hasAttribute('data-rio-id')) {
-            const rioId = node.getAttribute('data-rio-id');
+          if (
+            isElement(node) &&
+            node.hasAttribute("data-rio-view") &&
+            node.hasAttribute("data-rio-id")
+          ) {
+            const rioId = node.getAttribute("data-rio-id");
             const instance = registry.idInstances[rioId];
             instance.el = node;
             if (!instance._mounted) {
-              instance.dispatch('mount');
+              instance.dispatch("mount");
               instance._mounted = true;
             }
           }
@@ -310,17 +322,16 @@ class View {
 
       while (this._updatedQueue.length) {
         const view = this._updatedQueue.shift();
-        view.dispatch('updated');
+        view.dispatch("updated");
       }
 
-      this.dispatch('updated');
+      this.dispatch("updated");
     } catch (e) {
       throw e;
     } finally {
       registry.updateOpts = {};
     }
   }
-
 
   on(eventName, callback) {
     if (!this.handlers[eventName]) {
@@ -338,21 +349,19 @@ class View {
   get root() {
     return this.el;
   }
-
 }
 
 function Refs(view) {
-
   const traverse = function(el, name, descendant) {
-    if (el.getAttribute('ref') == name) return el;
+    if (el.getAttribute("ref") == name) return el;
     for (const c of el.children) {
       // don't descend into other views' elements
-      if (descendant && c.hasAttribute('data-rio-view')) continue;
+      if (descendant && c.hasAttribute("data-rio-view")) continue;
       const match = traverse(c, name, true);
       if (match) return match;
     }
     return null;
-  }
+  };
 
   const handler = {
     get: function(target, name) {
@@ -367,12 +376,11 @@ function Refs(view) {
         return null;
       }
     }
-  }
+  };
 
   return new Proxy({}, handler);
 }
 
-
 const rio = { fns: registry.fns, View };
 
-export { rio, View }
+export { rio, View };
