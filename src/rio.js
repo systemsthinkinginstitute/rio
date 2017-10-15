@@ -1,6 +1,5 @@
 import morphdom from "morphdom";
 import css from "./css";
-
 const registry = {
   idInstances: {},
   fns: {},
@@ -8,11 +7,6 @@ const registry = {
   styles: [],
   updateOpts: {}
 };
-
-const id = () => {
-  return String(Math.random());
-};
-
 class View {
   constructor() {
     const key = this.key(...arguments);
@@ -26,7 +20,6 @@ class View {
     this.refs = Refs(this);
     this._id = key;
     this._fids = [];
-    this.parent = null;
     this._updatedQueue = [];
     this._mounted = false;
     this._depth = 0;
@@ -72,12 +65,14 @@ class View {
   _injectStyle() {
     // construct compiled stylesheet and inject
     let css = "";
-    for (let [name, content] of registry.styles) {
+    for (let [_, content] of registry.styles) {
       css += content;
     }
     const styleEl = document.createElement("style");
     styleEl.innerHTML = css;
-    this.el.parentNode.insertBefore(styleEl, this.el);
+    if (this.el.parentNode) {
+      this.el.parentNode.insertBefore(styleEl, this.el);
+    }
   }
 
   _harvestViews() {
@@ -128,6 +123,7 @@ class View {
   /* public interface */
 
   tmpl(strings, ...expressions) {
+    const self = this;
     // tag function for interpolating templates
 
     if (!registry.styles.find(s => s[0] == this.namespace())) {
@@ -140,10 +136,15 @@ class View {
         fid = registry.fids.get(this).get(fn);
       } else {
         fid =
-          "ev" + String(parseInt(Math.random() * Number.MAX_SAFE_INTEGER - 1));
+          "ev" +
+          String(Math.round(Math.random() * Number.MAX_SAFE_INTEGER - 1));
         const boundFn = () => {
           fn.bind(this)(window.event);
-          return window.event.defaultPrevented;
+          if (window.event) {
+            return window.event.defaultPrevented;
+          } else {
+            return false;
+          }
         };
         registry.fids.get(this).set(fn, fid);
         registry.fns[fid] = boundFn;
@@ -167,13 +168,13 @@ class View {
           const fid = registerFn(val);
           output += `"rio.fns.${fid}()"`;
         } else if (Array.isArray(val)) {
-          // we need to flatten the array to a string
-          for (let i = 0; i < val.length; i++) {
-            if (val[i] instanceof View) {
-              val[i] = this._renderView(val[i]);
+          output += val.reduce((rendered, view) => {
+            if (view instanceof View) {
+              return rendered + self._renderView(view);
+            } else {
+              return rendered;
             }
-          }
-          output += val.join("");
+          }, "");
         } else if (val === null || val === undefined) {
           output += "";
         } else {
@@ -182,7 +183,7 @@ class View {
       }
     }
 
-    this._register(this._id, this);
+    this._register();
 
     // tack our id and view name onto the root element of the view
     output = output.replace(
@@ -289,6 +290,7 @@ class View {
             // don't update the focused element if it is uninterruptable
             return false;
           }
+          return true;
         },
         onBeforeNodeAdded: node => {
           // transplant existing view instance to its new element if need be
@@ -301,6 +303,7 @@ class View {
             }
             instance._setEl(node);
           }
+          return node;
         },
         onNodeAdded: node => {
           // mount our view instance if it is new
@@ -317,6 +320,7 @@ class View {
               instance._mounted = true;
             }
           }
+          return node;
         }
       });
 
@@ -336,8 +340,9 @@ class View {
   on(eventName, callback) {
     if (!this.handlers[eventName]) {
       throw new Error("no event " + eventName);
+    } else {
+      this.handlers[eventName].push(callback);
     }
-    this.handlers[eventName].push(callback);
   }
 
   dispatch(eventName) {
@@ -352,7 +357,7 @@ class View {
 }
 
 function Refs(view) {
-  const traverse = function(el, name, descendant) {
+  const traverse = (el, name, descendant) => {
     if (el.getAttribute("ref") == name) return el;
     for (const c of el.children) {
       // don't descend into other views' elements
@@ -364,13 +369,13 @@ function Refs(view) {
   };
 
   const handler = {
-    get: function(target, name) {
+    get: (target, name) => {
       if (target[name]) {
         return target[name];
       }
       if (view.el) {
-        const el = traverse(view.el, name);
-        target[name] = el;
+        const el = traverse(view.el, name, false);
+        if (el) target[name] = el;
         return el;
       } else {
         return null;
