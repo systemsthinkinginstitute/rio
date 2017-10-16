@@ -1,0 +1,21 @@
+{
+ "compilerOptions": {
+   "target": "es6",
+   "noImplicitAny": true,
+   "noUnusedLocals": true,
+   "noUnusedParameters": true,
+   "noImplicitThis": true,
+   "moduleResolution": "node",
+   "module": "es6",
+   "strictNullChecks": true,
+   "allowJs": true,
+   "checkJs": false,
+   "outDir": "output"
+ },
+ "include": [
+   "src/rio.ts"
+ ],
+ "exclude": [
+   "src/css.js"
+ ]
+}

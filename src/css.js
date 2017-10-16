@@ -316,4 +316,4 @@ fi.prototype.namespace = function(css, forcedNamespace) {
 };
 
 
-module.exports = new fi();
+export default css = new fi();

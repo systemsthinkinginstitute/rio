@@ -75,569 +75,351 @@ return /******/ (function(modules) { // webpackBootstrap
 /************************************************************************/
 /******/ ([
 /* 0 */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "rio", function() { return rio; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "View", function() { return View; });
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_morphdom__ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_morphdom___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_morphdom__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__css_js__ = __webpack_require__(2);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__css_js___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__css_js__);
 
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.View = exports.rio = undefined;
-
-var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _morphdom = __webpack_require__(1);
-
-var _morphdom2 = _interopRequireDefault(_morphdom);
-
-var _css2 = __webpack_require__(2);
-
-var _css3 = _interopRequireDefault(_css2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var registry = {
-  idInstances: {},
-  fns: {},
-  fids: new WeakMap(),
-  styles: [],
-  updateOpts: {}
+const registry = {
+    idInstances: {},
+    fns: {},
+    fids: new WeakMap(),
+    styles: [],
+    updateOpts: {},
 };
-
-var id = function id() {
-  return String(Math.random());
-};
-
-var View = function () {
-  function View() {
-    _classCallCheck(this, View);
-
-    var key = this.key.apply(this, arguments);
-    if (registry.idInstances[key]) {
-      // give back an existing instance if we already have
-      return registry.idInstances[key];
+class View {
+    constructor() {
+        const key = this.key(...arguments);
+        if (registry.idInstances[key]) {
+            // give back an existing instance if we already have
+            return registry.idInstances[key];
+        }
+        this.handlers = { mount: [], update: [], updated: [], unmount: [] };
+        this.initialize.apply(this, arguments);
+        this.finalize.apply(this);
+        this.refs = Refs(this);
+        this._id = key;
+        this._fids = [];
+        this._updatedQueue = [];
+        this._mounted = false;
+        this._depth = 0;
+        this.views = {};
+        registry.fids.set(this, new WeakMap());
     }
-    this.handlers = { mount: [], update: [], updated: [], unmount: [] };
-    this.initialize.apply(this, arguments);
-    this.finalize.apply(this);
-    this.refs = Refs(this);
-    this._id = key;
-    this._fids = [];
-    this.parent = null;
-    this._updatedQueue = [];
-    this._mounted = false;
-    this._depth = 0;
-    this.views = {};
-    registry.fids.set(this, new WeakMap());
-  }
-
-  /* methods to override */
-
-  _createClass(View, [{
-    key: 'namespace',
-    value: function namespace() {
-      // used for scoping css
-      return this.constructor.name;
+    namespace() {
+        // used for scoping css
+        return this.constructor.name;
     }
-  }, {
-    key: 'initialize',
-    value: function initialize() {
-      // implement in subclass
-    }
-  }, {
-    key: 'finalize',
-    value: function finalize() {
-      // implement in subclass
-    }
-  }, {
-    key: 'render',
-    value: function render() {
-      // implement in subclass
-    }
-  }, {
-    key: 'style',
-    value: function style() {
-      // implement in subclass
-    }
-  }, {
-    key: 'key',
-    value: function key() {
-      throw new Error("Please define a 'key' method that returns a deterministic key for a given instance.");
-    }
-
     /* helper methods */
-
-  }, {
-    key: '_register',
-    value: function _register() {
-      registry.idInstances[this._id] = this;
+    _register() {
+        registry.idInstances[this._id] = this;
     }
-  }, {
-    key: '_injectStyle',
-    value: function _injectStyle() {
-      // construct compiled stylesheet and inject
-      var css = '';
-      var _iteratorNormalCompletion = true;
-      var _didIteratorError = false;
-      var _iteratorError = undefined;
-
-      try {
-        for (var _iterator = registry.styles[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-          var _step$value = _slicedToArray(_step.value, 2),
-              name = _step$value[0],
-              content = _step$value[1];
-
-          css += content;
+    _injectStyle() {
+        // construct compiled stylesheet and inject
+        let css = '';
+        for (let [_, content] of registry.styles) {
+            css += content;
         }
-      } catch (err) {
-        _didIteratorError = true;
-        _iteratorError = err;
-      } finally {
-        try {
-          if (!_iteratorNormalCompletion && _iterator.return) {
-            _iterator.return();
-          }
-        } finally {
-          if (_didIteratorError) {
-            throw _iteratorError;
-          }
+        const styleEl = document.createElement('style');
+        styleEl.innerHTML = css;
+        if (this.el.parentNode) {
+            this.el.parentNode.insertBefore(styleEl, this.el);
         }
-      }
-
-      var styleEl = document.createElement('style');
-      styleEl.innerHTML = css;
-      this.el.parentNode.insertBefore(styleEl, this.el);
     }
-  }, {
-    key: '_harvestViews',
-    value: function _harvestViews() {
-      // deal with views and elements we've just mounted
-      var els = Array.from(this.el.querySelectorAll('[data-rio-id]'));
-      var descendants = [];
-      var _iteratorNormalCompletion2 = true;
-      var _didIteratorError2 = false;
-      var _iteratorError2 = undefined;
-
-      try {
-        for (var _iterator2 = els[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-          var el = _step2.value;
-
-          var instance = registry.idInstances[el.getAttribute('data-rio-id')];
-          instance.el = el;
-          descendants.push(instance);
-        }
-      } catch (err) {
-        _didIteratorError2 = true;
-        _iteratorError2 = err;
-      } finally {
-        try {
-          if (!_iteratorNormalCompletion2 && _iterator2.return) {
-            _iterator2.return();
-          }
-        } finally {
-          if (_didIteratorError2) {
-            throw _iteratorError2;
-          }
-        }
-      }
-
-      descendants = descendants.sort(function (a, b) {
-        return b._depth - a._depth;
-      });
-
-      var _iteratorNormalCompletion3 = true;
-      var _didIteratorError3 = false;
-      var _iteratorError3 = undefined;
-
-      try {
-        for (var _iterator3 = descendants[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-          var _instance = _step3.value;
-
-          _instance.dispatch('mount');
-          _instance._mounted = true;
-        }
-      } catch (err) {
-        _didIteratorError3 = true;
-        _iteratorError3 = err;
-      } finally {
-        try {
-          if (!_iteratorNormalCompletion3 && _iterator3.return) {
-            _iterator3.return();
-          }
-        } finally {
-          if (_didIteratorError3) {
-            throw _iteratorError3;
-          }
-        }
-      }
-    }
-  }, {
-    key: '_setEl',
-    value: function _setEl(el) {
-      this.el = el;
-      this.refs = Refs(this);
-    }
-  }, {
-    key: '_parent',
-    value: function _parent(p) {
-      // allow tmpl to set the parent
-      this.parent = p;
-    }
-  }, {
-    key: '_renderView',
-    value: function _renderView(view) {
-      if (view._mounted && view.shouldUpdate(registry.updateOpts) === false) {
-        var html = view.el.outerHTML;
-        html = html.replace(/(<[\w\-]+)/, '$1 data-rio-should-render-false');
-        return html;
-      }
-      view._parent(this);
-      var viewName = view.namespace();
-      this.views[viewName] = this.views[viewName] || [];
-      this.views[viewName].push(view);
-      view._depth = this._depth + 1;
-      if (view._mounted) view.dispatch('update');
-      var output = view.render();
-      if (view._mounted) this._updatedQueue.push(view);
-      return output;
-    }
-
-    /* public interface */
-
-  }, {
-    key: 'tmpl',
-    value: function tmpl(strings) {
-      var _this = this;
-
-      // tag function for interpolating templates
-
-      if (!registry.styles.find(function (s) {
-        return s[0] == _this.namespace();
-      })) {
-        registry.styles.push([this.namespace(), this.style()]);
-      }
-
-      var registerFn = function registerFn(fn) {
-
-        var fid = void 0;
-        if (registry.fids.get(_this).has(fn)) {
-          fid = registry.fids.get(_this).get(fn);
-        } else {
-          fid = 'ev' + String(parseInt(Math.random() * Number.MAX_SAFE_INTEGER - 1));
-          var boundFn = function boundFn() {
-            fn.bind(_this)(window.event);
-            return window.event.defaultPrevented;
-          };
-          registry.fids.get(_this).set(fn, fid);
-          registry.fns[fid] = boundFn;
-          _this._fids.push(fid);
-        }
-        return fid;
-      };
-
-      var output = '';
-      this._updatedQueue.length = 0;
-
-      for (var i = 0; i < strings.length; i++) {
-
-        output += strings[i];
-        if (i < (arguments.length <= 1 ? 0 : arguments.length - 1)) {
-          var val = arguments.length <= i + 1 ? undefined : arguments[i + 1];
-          if (val instanceof View) {
-            // assume we want to render if it is a view instance
-            output += this._renderView(val);
-          } else if (typeof val == 'function') {
-            // assume a function is an event handler and stash a reference
-            var fid = registerFn(val);
-            output += '"rio.fns.' + fid + '()"';
-          } else if (Array.isArray(val)) {
-            // we need to flatten the array to a string
-            for (var _i = 0; _i < val.length; _i++) {
-              if (val[_i] instanceof View) {
-                val[_i] = this._renderView(val[_i]);
-              }
+    _harvestViews() {
+        // deal with views and elements we've just mounted
+        const els = Array.from(this.el.querySelectorAll('[data-rio-id]'));
+        let descendants = [];
+        for (const el of els) {
+            if (el.hasAttribute('data-rio-id')) {
+                const instance = registry.idInstances[el.getAttribute('data-rio-id')];
+                instance.el = el;
+                descendants.push(instance);
             }
-            output += val.join('');
-          } else if (val === null || val === undefined) {
-            output += '';
-          } else {
-            output += val;
-          }
         }
-      }
-
-      this._register(this._id, this);
-
-      // tack our id and view name onto the root element of the view
-      output = output.replace(/(<[\w\-]+)/, '$1 data-rio-id="' + this._id + '" data-rio-view="' + this.namespace() + '"');
-
-      return output;
-    }
-  }, {
-    key: 'css',
-    value: function css(strings) {
-      // tag function for interpolating css
-      var output = '';
-      for (var i = 0; i < strings.length; i++) {
-        output += strings[i];
-        if (i < (arguments.length <= 1 ? 0 : arguments.length - 1)) {
-          output += arguments.length <= i + 1 ? undefined : arguments[i + 1];
+        descendants = descendants
+            .sort((a, b) => b._depth - a._depth);
+        for (const instance of descendants) {
+            instance.dispatch('mount');
+            instance._mounted = true;
         }
-      }
-      var namespace = '[data-rio-view=' + this.namespace() + ']';
-      output = _css3.default.serialize(_css3.default.namespace(output, namespace));
-      return output;
     }
-  }, {
-    key: 'mount',
-    value: function mount(el) {
-      try {
-        window.rio = rio;
-      } catch (e) {}
-      this.el = el;
-      this.html = this.render();
-      this._injectStyle();
-      this.el.innerHTML = this.html;
-      this._harvestViews();
+    _setEl(el) {
+        this.el = el;
+        this.refs = Refs(this);
     }
-  }, {
-    key: 'unmount',
-    value: function unmount() {
-      var _this2 = this;
-
-      // deregister our  event listeners
-      var _iteratorNormalCompletion4 = true;
-      var _didIteratorError4 = false;
-      var _iteratorError4 = undefined;
-
-      try {
-        for (var _iterator4 = this._fids[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-          var fid = _step4.value;
-
-          delete registry.fns[fid];
+    _parent(p) {
+        // allow tmpl to set the parent
+        this.parent = p;
+    }
+    _renderView(view) {
+        if (view._mounted && view.shouldUpdate(registry.updateOpts) === false) {
+            let html = view.el.outerHTML;
+            html = html.replace(/(<[\w\-]+)/, '$1 data-rio-should-render-false');
+            return html;
+        }
+        view._parent(this);
+        const viewName = view.namespace();
+        this.views[viewName] = this.views[viewName] || [];
+        this.views[viewName].push(view);
+        view._depth = this._depth + 1;
+        if (view._mounted)
+            view.dispatch('update');
+        const output = view.render();
+        if (view._mounted)
+            this._updatedQueue.push(view);
+        return output;
+    }
+    /* public interface */
+    tmpl(strings, ...expressions) {
+        const self = this;
+        // tag function for interpolating templates
+        if (!registry.styles.find(s => s[0] == this.namespace())) {
+            registry.styles.push([this.namespace(), this.style()]);
+        }
+        const registerFn = (fn) => {
+            let fid;
+            if (registry.fids.get(this).has(fn)) {
+                fid = registry.fids.get(this).get(fn);
+            }
+            else {
+                fid = 'ev' + String(Math.round(Math.random() * Number.MAX_SAFE_INTEGER - 1));
+                const boundFn = () => {
+                    fn.bind(this)(window.event);
+                    if (window.event) {
+                        return window.event.defaultPrevented;
+                    }
+                    else {
+                        return false;
+                    }
+                };
+                registry.fids.get(this).set(fn, fid);
+                registry.fns[fid] = boundFn;
+                this._fids.push(fid);
+            }
+            return fid;
+        };
+        let output = '';
+        this._updatedQueue.length = 0;
+        for (let i = 0; i < strings.length; i++) {
+            output += strings[i];
+            if (i < expressions.length) {
+                const val = expressions[i];
+                if (val instanceof View) {
+                    // assume we want to render if it is a view instance
+                    output += this._renderView(val);
+                }
+                else if (typeof val == 'function') {
+                    // assume a function is an event handler and stash a reference
+                    const fid = registerFn(val);
+                    output += `"rio.fns.${fid}()"`;
+                }
+                else if (Array.isArray(val)) {
+                    output += val.reduce((rendered, view) => {
+                        if (view instanceof View) {
+                            return rendered + self._renderView(view);
+                        }
+                        else {
+                            return rendered;
+                        }
+                    }, '');
+                }
+                else if (val === null || val === undefined) {
+                    output += '';
+                }
+                else {
+                    output += val;
+                }
+            }
+        }
+        this._register();
+        // tack our id and view name onto the root element of the view
+        output = output.replace(/(<[\w\-]+)/, '$1 data-rio-id="' + this._id + '" data-rio-view="' + this.namespace() + '"');
+        return output;
+    }
+    css(strings, ...expressions) {
+        // tag function for interpolating css
+        let output = '';
+        for (let i = 0; i < strings.length; i++) {
+            output += strings[i];
+            if (i < expressions.length) {
+                output += expressions[i];
+            }
+        }
+        const namespace = `[data-rio-view=${this.namespace()}]`;
+        output = __WEBPACK_IMPORTED_MODULE_1__css_js___default.a.serialize(__WEBPACK_IMPORTED_MODULE_1__css_js___default.a.namespace(output, namespace));
+        return output;
+    }
+    mount(el) {
+        try {
+            window.rio = rio;
+        }
+        catch (e) { }
+        this.el = el;
+        this.html = this.render();
+        this._injectStyle();
+        this.el.innerHTML = this.html;
+        this._harvestViews();
+    }
+    unmount() {
+        // deregister our  event listeners
+        for (let fid of this._fids) {
+            delete registry.fns[fid];
         }
         // remove any associated element from the dom
-      } catch (err) {
-        _didIteratorError4 = true;
-        _iteratorError4 = err;
-      } finally {
+        if (this.el && this.el.parentNode) {
+            this.el.parentNode.removeChild(this.el);
+        }
+        // remove ourself from our parent's views listing
+        if (this.parent) {
+            const viewName = this.namespace();
+            const index = this.parent.views[viewName].findIndex(v => v == this);
+            this.parent.views[viewName].splice(index, 1);
+        }
+    }
+    shouldUpdate(_) {
+        return true;
+    }
+    update(opts) {
+        // rerender the view and morph the dom to match
+        if (this._mounted && this.shouldUpdate(opts) === false) {
+            return;
+        }
+        if (!this.el)
+            return;
+        this.dispatch('update');
+        const newHTML = this.render().trim();
+        registry.updateOpts = opts;
         try {
-          if (!_iteratorNormalCompletion4 && _iterator4.return) {
-            _iterator4.return();
-          }
-        } finally {
-          if (_didIteratorError4) {
-            throw _iteratorError4;
-          }
-        }
-      }
-
-      if (this.el && this.el.parentNode) {
-        this.el.parentNode.removeChild(this.el);
-      }
-      // remove ourself from our parent's views listing
-      if (this.parent) {
-        var viewName = this.namespace();
-        var index = this.parent.views[viewName].findIndex(function (v) {
-          return v == _this2;
-        });
-        this.parent.views[viewName].splice(index, 1);
-      }
-    }
-  }, {
-    key: 'shouldUpdate',
-    value: function shouldUpdate() {
-      return true;
-    }
-  }, {
-    key: 'update',
-    value: function update(opts) {
-      // rerender the view and morph the dom to match
-      if (this._mounted && this.shouldUpdate(opts) === false) {
-        return;
-      }
-
-      if (!this.el) return;
-      this.dispatch('update');
-      var newHTML = this.render().trim();
-      registry.updateOpts = opts;
-      try {
-        var isElement = function isElement(node) {
-          return node.nodeType == Node.ELEMENT_NODE;
-        };
-
-        (0, _morphdom2.default)(this.el, newHTML, {
-          getNodeKey: function getNodeKey(node) {
-            return isElement(node) ? node.getAttribute('data-rio-id') || node.id : node.id;
-          },
-          onNodeDiscarded: function onNodeDiscarded(node) {
-            // unmount our associated instance
-            if (isElement(node) && node.hasAttribute('data-rio-id')) {
-              var rioId = node.getAttribute('data-rio-id');
-              var instance = registry.idInstances[rioId];
-              instance.dispatch('unmount');
-              instance.unmount();
+            function isElement(node) {
+                return node.nodeType == Node.ELEMENT_NODE;
             }
-          },
-          onBeforeNodeDiscarded: function onBeforeNodeDiscarded(node) {
-            // don't remove elements with rio-sacrosanct attribute
-            return isElement(node) && !node.hasAttribute('rio-sacrosanct');
-          },
-          onBeforeElUpdated: function onBeforeElUpdated(fromNode, toNode) {
-            if (toNode.hasAttribute('data-rio-should-render-false')) {
-              return false;
+            __WEBPACK_IMPORTED_MODULE_0_morphdom__(this.el, newHTML, {
+                getNodeKey: (node) => {
+                    return isElement(node) ? node.getAttribute('data-rio-id') || node.id : node.id;
+                },
+                onNodeDiscarded: (node) => {
+                    // unmount our associated instance
+                    if (isElement(node) && node.hasAttribute('data-rio-id')) {
+                        const rioId = node.getAttribute('data-rio-id');
+                        const instance = registry.idInstances[rioId];
+                        instance.dispatch('unmount');
+                        instance.unmount();
+                    }
+                },
+                onBeforeNodeDiscarded: (node) => {
+                    // don't remove elements with rio-sacrosanct attribute
+                    return isElement(node) && !node.hasAttribute('rio-sacrosanct');
+                },
+                onBeforeElUpdated: (fromNode, toNode) => {
+                    if (toNode.hasAttribute('data-rio-should-render-false')) {
+                        return false;
+                    }
+                    if (isElement(fromNode) && document.activeElement == fromNode && fromNode.hasAttribute('rio-uninterruptable-input')) {
+                        // don't update the focused element if it is uninterruptable
+                        return false;
+                    }
+                    return true;
+                },
+                onBeforeNodeAdded: (node) => {
+                    // transplant existing view instance to its new element if need be
+                    if (isElement(node) && node.hasAttribute('data-rio-id')) {
+                        const rioId = node.getAttribute('data-rio-id');
+                        const instance = registry.idInstances[rioId];
+                        // if the old element is in the dom, remove it and throw it away
+                        if (instance && instance.el && instance.el.parentNode) {
+                            instance.el.parentNode.removeChild(instance.el);
+                        }
+                        instance._setEl(node);
+                    }
+                    return node;
+                },
+                onNodeAdded: (node) => {
+                    // mount our view instance if it is new
+                    if (isElement(node) && node.hasAttribute('data-rio-view') && node.hasAttribute('data-rio-id')) {
+                        const rioId = node.getAttribute('data-rio-id');
+                        const instance = registry.idInstances[rioId];
+                        instance.el = node;
+                        if (!instance._mounted) {
+                            instance.dispatch('mount');
+                            instance._mounted = true;
+                        }
+                    }
+                    return node;
+                }
+            });
+            while (this._updatedQueue.length) {
+                const view = this._updatedQueue.shift();
+                view.dispatch('updated');
             }
-            if (isElement(fromNode) && document.activeElement == fromNode && fromNode.hasAttribute('rio-uninterruptable-input')) {
-              // don't update the focused element if it is uninterruptable
-              return false;
-            }
-          },
-          onBeforeNodeAdded: function onBeforeNodeAdded(node) {
-            // transplant existing view instance to its new element if need be
-            if (isElement(node) && node.hasAttribute('data-rio-id')) {
-              var rioId = node.getAttribute('data-rio-id');
-              var instance = registry.idInstances[rioId];
-              // if the old element is in the dom, remove it and throw it away
-              if (instance && instance.el && instance.el.parentNode) {
-                instance.el.parentNode.removeChild(instance.el);
-              }
-              instance._setEl(node);
-            }
-          },
-          onNodeAdded: function onNodeAdded(node) {
-            // mount our view instance if it is new
-            if (isElement(node) && node.hasAttribute('data-rio-view') && node.hasAttribute('data-rio-id')) {
-              var rioId = node.getAttribute('data-rio-id');
-              var instance = registry.idInstances[rioId];
-              instance.el = node;
-              if (!instance._mounted) {
-                instance.dispatch('mount');
-                instance._mounted = true;
-              }
-            }
-          }
-        });
-
-        while (this._updatedQueue.length) {
-          var view = this._updatedQueue.shift();
-          view.dispatch('updated');
+            this.dispatch('updated');
         }
-
-        this.dispatch('updated');
-      } catch (e) {
-        throw e;
-      } finally {
-        registry.updateOpts = {};
-      }
-    }
-  }, {
-    key: 'on',
-    value: function on(eventName, callback) {
-      if (!this.handlers[eventName]) {
-        throw new Error("no event " + eventName);
-      }
-      this.handlers[eventName].push(callback);
-    }
-  }, {
-    key: 'dispatch',
-    value: function dispatch(eventName) {
-      var _iteratorNormalCompletion5 = true;
-      var _didIteratorError5 = false;
-      var _iteratorError5 = undefined;
-
-      try {
-        for (var _iterator5 = this.handlers[eventName][Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-          var handler = _step5.value;
-
-          handler.call(this);
+        catch (e) {
+            throw e;
         }
-      } catch (err) {
-        _didIteratorError5 = true;
-        _iteratorError5 = err;
-      } finally {
-        try {
-          if (!_iteratorNormalCompletion5 && _iterator5.return) {
-            _iterator5.return();
-          }
-        } finally {
-          if (_didIteratorError5) {
-            throw _iteratorError5;
-          }
+        finally {
+            registry.updateOpts = {};
         }
-      }
     }
-  }, {
-    key: 'root',
-    get: function get() {
-      return this.el;
-    }
-  }]);
-
-  return View;
-}();
-
-function Refs(view) {
-
-  var traverse = function traverse(el, name, descendant) {
-    if (el.getAttribute('ref') == name) return el;
-    var _iteratorNormalCompletion6 = true;
-    var _didIteratorError6 = false;
-    var _iteratorError6 = undefined;
-
-    try {
-      for (var _iterator6 = el.children[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-        var c = _step6.value;
-
-        // don't descend into other views' elements
-        if (descendant && c.hasAttribute('data-rio-view')) continue;
-        var match = traverse(c, name, true);
-        if (match) return match;
-      }
-    } catch (err) {
-      _didIteratorError6 = true;
-      _iteratorError6 = err;
-    } finally {
-      try {
-        if (!_iteratorNormalCompletion6 && _iterator6.return) {
-          _iterator6.return();
+    on(eventName, callback) {
+        if (!this.handlers[eventName]) {
+            throw new Error("no event " + eventName);
         }
-      } finally {
-        if (_didIteratorError6) {
-          throw _iteratorError6;
+        else {
+            this.handlers[eventName].push(callback);
         }
-      }
     }
-
-    return null;
-  };
-
-  var handler = {
-    get: function get(target, name) {
-      if (target[name]) {
-        return target[name];
-      }
-      if (view.el) {
-        var el = traverse(view.el, name);
-        target[name] = el;
-        return el;
-      } else {
-        return null;
-      }
+    dispatch(eventName) {
+        for (const handler of this.handlers[eventName]) {
+            handler.call(this);
+        }
     }
-  };
-
-  return new Proxy({}, handler);
+    get root() {
+        return this.el;
+    }
 }
+function Refs(view) {
+    const traverse = (el, name, descendant) => {
+        if (el.getAttribute('ref') == name)
+            return el;
+        for (const c of el.children) {
+            // don't descend into other views' elements
+            if (descendant && c.hasAttribute('data-rio-view'))
+                continue;
+            const match = traverse(c, name, true);
+            if (match)
+                return match;
+        }
+        return null;
+    };
+    const handler = {
+        get: (target, name) => {
+            if (target[name]) {
+                return target[name];
+            }
+            if (view.el) {
+                const el = traverse(view.el, name, false);
+                if (el)
+                    target[name] = el;
+                return el;
+            }
+            else {
+                return null;
+            }
+        }
+    };
+    return new Proxy({}, handler);
+}
+const rio = { fns: registry.fns, View };
 
-var rio = { fns: registry.fns, View: View };
 
-exports.rio = rio;
-exports.View = View;
 
 /***/ }),
 /* 1 */
@@ -1337,6 +1119,9 @@ module.exports = morphdom;
 
 
 
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
 var fi = function fi() {
 
   this.cssImportStatements = [];
@@ -1652,7 +1437,7 @@ fi.prototype.namespace = function (css, forcedNamespace) {
   return cssObjectArray;
 };
 
-module.exports = new fi();
+exports.default = css = new fi();
 
 /***/ })
 /******/ ]);
