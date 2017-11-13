@@ -235,6 +235,8 @@ class View {
       const index = this.parent.views[viewName].findIndex(v => v == this);
       this.parent.views[viewName].splice(index, 1);
     }
+
+    delete registry.idInstances[this._id]
   }
 
   shouldUpdate() {
