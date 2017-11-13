@@ -132,6 +132,9 @@ class View {
 
   tmpl(strings, ...expressions) {
 
+    //flush views
+    this.views = {};
+
     // tag function for interpolating templates
 
     if (!registry.styles.find(s => s[0] == this.namespace())) {
